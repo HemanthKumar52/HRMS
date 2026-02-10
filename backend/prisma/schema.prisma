@@ -1,0 +1,356 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  domain    String   @unique
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  phone          String?
+  avatarUrl      String?
+  role           Role           @default(EMPLOYEE)
+  workMode       WorkMode       @default(OFFICE) @map("work_mode")
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  managerId      String?
+  manager        User?          @relation("ManagerReports", fields: [managerId], references: [id])
+  reports        User[]         @relation("ManagerReports")
+  department     String?
+  designation    String?
+  leaves         Leave[]
+  attendances    DailyAttendance[]
+  attendanceActivities AttendanceActivity[]
+  assetsOwned          Asset[]              @relation("AssetOwner")
+  assetsAssigned       AssetAssignment[]    @relation("AssignedAssets")
+  assetsGiven          AssetAssignment[]    @relation("AssetAssigner")
+  notifications        Notification[]
+  tickets              Ticket[]
+  claims               Claim[]
+  refreshTokens  RefreshToken[]
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("users")
+}
+
+// ... (Rest of schema, removing old Attendance model block)
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  HR_ADMIN
+}
+
+
+enum WorkMode {
+  OFFICE       // Biometric + Geofence + Clock In/Out (ALL THREE REQUIRED)
+  REMOTE       // Clock In/Out only
+  ON_DUTY      // GPS location (lat/long + address) captured on Clock In and Clock Out
+}
+
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Leave {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  type        LeaveType
+  status      LeaveStatus @default(PENDING)
+  fromDate    DateTime
+  toDate      DateTime
+  isHalfDay   Boolean     @default(false)
+  halfDayType HalfDayType?
+  reason      String?
+  rejectReason String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("leaves")
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum HalfDayType {
+  FIRST_HALF
+  SECOND_HALF
+}
+
+model LeaveBalance {
+  id           String    @id @default(uuid())
+  userId       String
+  leaveType    LeaveType
+  totalDays    Float     @default(0)
+  usedDays     Float     @default(0)
+  year         Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, leaveType, year])
+  @@map("leave_balances")
+}
+
+
+
+enum PunchType {
+  CLOCK_IN
+  CLOCK_OUT
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  type      String
+  isRead    Boolean  @default(false)
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// Enhanced Schema based on SQL Dump
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  actorId    String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// --- ASSET MANAGEMENT ---
+
+model AssetCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  colorCode   String?  @map("color_code")
+  assets      Asset[]
+  softwares   Software[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("asset_categories")
+}
+
+model Asset {
+  id                     String            @id @default(uuid())
+  assetName              String            @map("asset_name")
+  description            String?           @map("asset_description")
+  trackingId             String            @unique @map("asset_tracking_id")
+  purchaseDate           DateTime          @map("asset_purchase_date")
+  purchaseCost           Decimal           @map("asset_purchase_cost")
+  status                 String            @map("asset_status") // "In use", "Available"
+  expiryDate             DateTime?         @map("expiry_date")
+  categoryId             String            @map("asset_category_id")
+  category               AssetCategory     @relation(fields: [categoryId], references: [id])
+  ownerId                String?           @map("owner_id")
+  owner                  User?             @relation("AssetOwner", fields: [ownerId], references: [id])
+  assignments            AssetAssignment[]
+  isActive               Boolean           @default(true) @map("is_active")
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  @@map("assets")
+}
+
+model AssetAssignment {
+  id             String    @id @default(uuid())
+  assetId        String    @map("asset_id")
+  asset          Asset     @relation(fields: [assetId], references: [id])
+  assignedToId   String    @map("assigned_to_id")
+  assignedTo     User      @relation("AssignedAssets", fields: [assignedToId], references: [id])
+  assignedById   String    @map("assigned_by_id")
+  assignedBy     User      @relation("AssetAssigner", fields: [assignedById], references: [id])
+  assignedDate   DateTime  @map("assigned_date")
+  returnDate     DateTime? @map("return_date")
+  returnCondition String?  @map("return_condition")
+  returnStatus   String?   @map("return_status")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("asset_assignments")
+}
+
+model Software {
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  licenseType    String         @map("license_type") // "per_user", "one_time"
+  totalLicenses  Int?           @map("total_licenses")
+  costPerLicense Decimal        @map("cost_per_license")
+  billingCycle   String         @map("billing_cycle") // "monthly", "yearly"
+  purchaseDate   DateTime?      @map("purchase_date")
+  renewalDate    DateTime?      @map("renewal_date")
+  categoryId     String         @map("category_id")
+  category       AssetCategory  @relation(fields: [categoryId], references: [id])
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("softwares")
+}
+
+// --- ATTENDANCE MANAGEMENT (Enhanced) ---
+
+// Maps to `attendance_attendance`
+model DailyAttendance {
+  id              String    @id @default(uuid())
+  date            DateTime  @map("attendance_date") @db.Date // Only Date part
+  userId          String    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id])
+  
+  clockInTime     DateTime? @map("clock_in_time")
+  clockOutTime    DateTime? @map("clock_out_time")
+  
+  totalHours      String?   @default("00:00") @map("worked_hours")
+  overtimeHours   String?   @default("00:00") @map("overtime_hours")
+  
+  isValidated     Boolean   @default(false) @map("is_validated")
+  isHoliday       Boolean   @default(false) @map("is_holiday")
+  
+  activities      AttendanceActivity[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, date])
+  @@map("daily_attendances")
+}
+
+// Maps to `attendance_attendanceactivity` (The punches)
+model AttendanceActivity {
+  id              String          @id @default(uuid())
+  dailyAttendanceId String?       @map("daily_attendance_id")
+  dailyAttendance DailyAttendance? @relation(fields: [dailyAttendanceId], references: [id])
+  
+  userId          String          @map("user_id")
+  user            User            @relation(fields: [userId], references: [id])
+  
+  punchType       PunchType       @map("punch_type")
+  workMode        WorkMode?       @map("work_mode") // Track which mode was active during punch
+  timestamp       DateTime
+  
+  latitude        Float?
+  longitude       Float?
+  address         String?
+  deviceId        String?
+  isOffline       Boolean         @default(false)
+  syncedAt        DateTime?
+  
+  createdAt       DateTime        @default(now())
+
+  @@map("attendance_activities")
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  subject     String
+  description String
+  department  String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("tickets")
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Claim {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  type          ClaimType
+  amount        Float
+  description   String?
+  attachmentUrl String?
+  status        ClaimStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("claims")
+}
+
+enum ClaimType {
+  TRAVEL
+  MEDICAL
+  FOOD
+  STATIONERY
+  OTHER
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+
