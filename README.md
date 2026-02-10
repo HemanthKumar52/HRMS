@@ -4,7 +4,8 @@ A production-ready, full-featured Human Resource Management System with Flutter 
 
 ## Features
 
-### For All Roles (Employee, Manager, HR Admin)
+### Core Functionality
+- **Authentication**: JWT-based login with role-based access control
 - **Work Mode Selection**: Choose between Office, Remote, or On-Duty mode after login
 - **Attendance Tracking**: Real-time clock in/out with GPS location tracking
 - **Leave Management**: Apply, view, and track leave requests
@@ -12,22 +13,22 @@ A production-ready, full-featured Human Resource Management System with Flutter 
 - **Notifications**: Real-time notifications for approvals, updates, and alerts
 - **Employee Directory**: Search and view colleague profiles
 
-### Role-Specific Features
+### Role-Based Dashboards
 
-**Employee Dashboard**
+**Employee**
 - Personal attendance timer with punch in/out
 - Leave balance overview
 - Salary information
 - Request tracking (tickets, claims)
 - Quick actions (Raise Ticket, Submit Claim)
 
-**Manager Dashboard**
+**Manager**
 - Team overview and management
 - Pending approvals (leave, expenses, shifts)
 - Team attendance status
 - Project and task management
 
-**HR Admin Dashboard**
+**HR Admin**
 - Organization-wide overview
 - Leave and expense approvals
 - Department statistics
@@ -35,9 +36,11 @@ A production-ready, full-featured Human Resource Management System with Flutter 
 - Employee management
 
 ### Work Modes
-- **Office**: Requires biometric + geofence verification + clock in/out
-- **Remote**: Simple clock in/out (no location verification)
-- **On-Duty (OD)**: GPS location captured on clock in/out with address
+| Mode | Description |
+|------|-------------|
+| Office | Requires biometric + geofence verification + clock in/out |
+| Remote | Simple clock in/out (no location verification) |
+| On-Duty (OD) | GPS location captured on clock in/out with address |
 
 ## Tech Stack
 
@@ -111,13 +114,8 @@ hrms-app/
 - PostgreSQL (or use Prisma Accelerate cloud)
 - Git
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/HemanthKumar52/HRMS.git
-cd HRMS
-```
+### Backend Setup
 
-### 2. Backend Setup
 ```bash
 cd backend
 
@@ -131,7 +129,7 @@ cp .env.example .env
 # Generate Prisma client
 npx prisma generate
 
-# Push schema to database (creates tables)
+# Push schema to database
 npx prisma db push
 
 # Seed the database with test data
@@ -143,7 +141,8 @@ npm run start:dev
 
 The API will be available at `http://localhost:3000`
 
-### 3. Mobile App Setup
+### Mobile App Setup
+
 ```bash
 cd mobile
 
@@ -161,7 +160,7 @@ flutter run
 | HR Admin | hr@acme.com | password123 |
 | Manager | manager@acme.com | password123 |
 | Employee | employee@acme.com | password123 |
-| Additional Employees | alice@acme.com, bob@acme.com, etc. | password123 |
+| Additional | alice@acme.com, bob@acme.com, etc. | password123 |
 
 ## API Endpoints
 
@@ -180,7 +179,6 @@ flutter run
 | GET | `/api/v1/attendance/today` | Get today's status |
 | GET | `/api/v1/attendance/summary` | Get weekly/monthly summary |
 | GET | `/api/v1/attendance/history` | Get attendance history |
-| POST | `/api/v1/attendance/sync` | Sync offline punches |
 
 ### Leave Management
 | Method | Endpoint | Description |
@@ -220,9 +218,24 @@ flutter run
 NODE_ENV=development
 DATABASE_URL=postgresql://user:password@localhost:5432/hrms
 JWT_SECRET=your-super-secret-jwt-key-min-32-chars
+JWT_REFRESH_SECRET=your-super-secret-refresh-key
 JWT_EXPIRATION=15m
 JWT_REFRESH_EXPIRATION=7d
 ```
+
+## Database Schema
+
+Key models:
+- **User**: Employees with roles (EMPLOYEE, MANAGER, HR_ADMIN)
+- **Organization**: Company/tenant
+- **DailyAttendance**: Daily attendance summary
+- **AttendanceActivity**: Individual punch records
+- **Leave**: Leave requests
+- **LeaveBalance**: Leave quota tracking
+- **Ticket**: Support tickets
+- **Claim**: Expense claims
+- **Asset**: Company assets
+- **Notification**: User notifications
 
 ## Production Deployment
 
@@ -243,41 +256,6 @@ JWT_REFRESH_EXPIRATION=7d
    flutter build ios --release
    ```
 
-## Database Schema
-
-Key models:
-- **User**: Employees with roles (EMPLOYEE, MANAGER, HR_ADMIN)
-- **Organization**: Company/tenant
-- **DailyAttendance**: Daily attendance summary
-- **AttendanceActivity**: Individual punch records
-- **Leave**: Leave requests
-- **LeaveBalance**: Leave quota tracking
-- **Ticket**: Support tickets
-- **Claim**: Expense claims
-- **Asset**: Company assets
-- **Notification**: User notifications
-
-## Screenshots
-
-The app includes:
-- Modern gradient dashboards
-- Interactive attendance timer with pie chart
-- Location map with geofencing
-- Glass morphism profile sheet
-- Animated transitions
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
 ## License
 
 MIT License - feel free to use for personal and commercial projects.
-
----
-
-Built with Flutter & NestJS
