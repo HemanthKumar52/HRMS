@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/providers/work_mode_provider.dart';
+import '../../../core/widgets/pulse_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -100,46 +101,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                   opacity: _fadeAnimation,
                   child: ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.business_center,
-                        size: 60,
-                        color: Color(0xFF6366F1),
-                      ),
+                    child: const PulseLogo(
+                      textColor: Colors.white,
+                      size: 1.5,
                     ),
                   ),
                 ),
                 
-                const SizedBox(height: 30),
-                
-                // App Name
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    'HRMS',
-                    style: GoogleFonts.poppins(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
                 
                 // Tagline
                 FadeTransition(

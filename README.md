@@ -1,65 +1,8 @@
-# HRMS - Human Resource Management System
 
-A production-ready, full-featured Human Resource Management System with Flutter mobile app and NestJS backend.
 
-## Features
+# HRMS Mobile Application
 
-### Core Functionality
-- **Authentication**: JWT-based login with role-based access control
-- **Work Mode Selection**: Choose between Office, Remote, or On-Duty mode after login
-- **Attendance Tracking**: Real-time clock in/out with GPS location tracking
-- **Leave Management**: Apply, view, and track leave requests
-- **Profile Management**: View skills, performance metrics, and personal details
-- **Notifications**: Real-time notifications for approvals, updates, and alerts
-- **Employee Directory**: Search and view colleague profiles
-
-### Role-Based Dashboards
-
-**Employee**
-- Personal attendance timer with punch in/out
-- Leave balance overview
-- Salary information
-- Request tracking (tickets, claims)
-- Quick actions (Raise Ticket, Submit Claim)
-
-**Manager**
-- Team overview and management
-- Pending approvals (leave, expenses, shifts)
-- Team attendance status
-- Project and task management
-
-**HR Admin**
-- Organization-wide overview
-- Leave and expense approvals
-- Department statistics
-- Onboarding management
-- Employee management
-
-### Work Modes
-| Mode | Description |
-|------|-------------|
-| Office | Requires biometric + geofence verification + clock in/out |
-| Remote | Simple clock in/out (no location verification) |
-| On-Duty (OD) | GPS location captured on clock in/out with address |
-
-## Tech Stack
-
-### Mobile App (Flutter)
-- Flutter 3.16+
-- Riverpod for state management
-- GoRouter for navigation
-- Dio for API calls
-- Flutter Secure Storage for tokens
-- Flutter Map for location features
-- Local Auth for biometrics
-
-### Backend (NestJS)
-- NestJS with TypeScript
-- Prisma ORM
-- PostgreSQL database
-- JWT authentication
-- Passport.js for guards
-- Class Validator for DTOs
+A comprehensive Human Resource Management System with a Flutter mobile app and NestJS backend.
 
 ## Project Structure
 
@@ -69,16 +12,9 @@ hrms-app/
 │   ├── lib/
 │   │   ├── main.dart
 │   │   ├── app.dart
-│   │   ├── core/              # Theme, constants, widgets
-│   │   ├── features/          # Feature modules
-│   │   │   ├── auth/          # Login, work mode selection
-│   │   │   ├── home/          # Dashboards (Employee, Manager, HR)
-│   │   │   ├── attendance/    # Clock in/out, history
-│   │   │   ├── leave/         # Leave management
-│   │   │   ├── directory/     # Employee directory
-│   │   │   ├── profile/       # User profile
-│   │   │   └── notifications/ # Notifications
-│   │   ├── shared/            # Shared models, providers
+│   │   ├── core/              # Core utilities
+│   │   ├── features/          # Feature-based modules
+│   │   ├── shared/            # Shared widgets, models
 │   │   └── routes/            # GoRouter configuration
 │   └── pubspec.yaml
 │
@@ -88,33 +24,39 @@ hrms-app/
 │   │   ├── app.module.ts
 │   │   ├── common/            # Guards, decorators, filters
 │   │   ├── modules/           # Feature modules
-│   │   │   ├── auth/          # Authentication
-│   │   │   ├── users/         # User management
-│   │   │   ├── attendance/    # Attendance tracking
-│   │   │   ├── leave/         # Leave management
-│   │   │   ├── notifications/ # Notifications
-│   │   │   ├── tickets/       # Support tickets
-│   │   │   ├── claims/        # Expense claims
-│   │   │   └── assets/        # Asset management
 │   │   └── prisma/            # Prisma service
 │   ├── prisma/
-│   │   ├── schema.prisma      # Database schema
-│   │   └── seed.ts            # Seed data
+│   │   └── schema.prisma
 │   └── package.json
 │
 ├── docker-compose.yml
 └── README.md
 ```
 
+## Features (Sprint 1 MVP)
+
+- **Authentication**: Email/password login with JWT tokens
+- **Leave Management**: Apply, view, cancel, approve/reject leave requests
+- **Attendance**: Clock in/out with GPS tracking, offline support
+- **Employee Directory**: Search and view employee profiles
+- **Notifications**: In-app and push notifications
+
+## Prerequisites
+
+- Docker and Docker Compose
+- Flutter SDK (3.16+)
+- Node.js (18+)
+
 ## Quick Start
 
-### Prerequisites
-- Node.js 18+
-- Flutter SDK 3.16+
-- PostgreSQL (or use Prisma Accelerate cloud)
-- Git
+### 1. Start Infrastructure
 
-### Backend Setup
+```bash
+# Start PostgreSQL and Redis
+docker-compose up -d postgres redis
+```
+
+### 2. Backend Setup
 
 ```bash
 cd backend
@@ -122,17 +64,13 @@ cd backend
 # Install dependencies
 npm install
 
-# Copy environment file and configure
-cp .env.example .env
-# Edit .env with your database URL and JWT secret
-
 # Generate Prisma client
 npx prisma generate
 
-# Push schema to database
-npx prisma db push
+# Run database migrations
+npx prisma migrate dev
 
-# Seed the database with test data
+# Seed the database (optional)
 npx prisma db seed
 
 # Start development server
@@ -141,17 +79,27 @@ npm run start:dev
 
 The API will be available at `http://localhost:3000`
 
-### Mobile App Setup
+### 3. Mobile App Setup
 
 ```bash
 cd mobile
 
+# Initialize Flutter project (REQUIRED - creates android/, ios/, etc.)
+flutter create . --org com.hrms --project-name hrms_mobile
+
 # Get dependencies
 flutter pub get
 
-# Run the app
-flutter run
+# Run the app (choose your platform)
+flutter run -d android
+flutter run -d ios
+flutter run -d windows
+flutter run -d macos
+flutter run -d linux
+flutter run -d chrome
 ```
+
+**Important**: See `mobile/SETUP.md` for platform-specific configuration (permissions, etc.)
 
 ## Test Credentials
 
@@ -160,27 +108,20 @@ flutter run
 | HR Admin | hr@acme.com | password123 |
 | Manager | manager@acme.com | password123 |
 | Employee | employee@acme.com | password123 |
-| Additional | alice@acme.com, bob@acme.com, etc. | password123 |
 
-## API Endpoints
+## API Documentation
 
 ### Authentication
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/auth/login` | Login with email/password |
 | POST | `/api/v1/auth/refresh` | Refresh access token |
-| POST | `/api/v1/auth/logout` | Logout |
-| GET | `/api/v1/auth/profile` | Get current user profile |
-
-### Attendance
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/attendance/punch` | Clock in/out |
-| GET | `/api/v1/attendance/today` | Get today's status |
-| GET | `/api/v1/attendance/summary` | Get weekly/monthly summary |
-| GET | `/api/v1/attendance/history` | Get attendance history |
+| POST | `/api/v1/auth/logout` | Logout and invalidate tokens |
+| GET | `/api/v1/auth/me` | Get current user profile |
 
 ### Leave Management
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/leave/apply` | Apply for leave |
@@ -190,7 +131,17 @@ flutter run
 | POST | `/api/v1/leave/:id/approve` | Approve leave (Manager) |
 | POST | `/api/v1/leave/:id/reject` | Reject leave (Manager) |
 
-### Users/Directory
+### Attendance
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/attendance/punch` | Clock in/out |
+| GET | `/api/v1/attendance/today` | Get today's status |
+| GET | `/api/v1/attendance/summary` | Get weekly/monthly summary |
+| GET | `/api/v1/attendance/history` | Get attendance history |
+
+### Employee Directory
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/users` | List employees |
@@ -198,64 +149,41 @@ flutter run
 | GET | `/api/v1/users/:id/team` | Get direct reports |
 
 ### Notifications
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/notifications` | List notifications |
 | PATCH | `/api/v1/notifications/:id/read` | Mark as read |
 
-### Tickets & Claims
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/tickets` | Create support ticket |
-| GET | `/api/v1/tickets` | List tickets |
-| POST | `/api/v1/claims` | Submit expense claim |
-| GET | `/api/v1/claims` | List claims |
-
 ## Environment Variables
 
-### Backend (.env)
-```env
-NODE_ENV=development
-DATABASE_URL=postgresql://user:password@localhost:5432/hrms
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-JWT_REFRESH_SECRET=your-super-secret-refresh-key
-JWT_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
-```
+### Backend
 
-## Database Schema
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | - |
+| `REDIS_URL` | Redis connection string | - |
+| `JWT_SECRET` | JWT signing secret | - |
+| `JWT_REFRESH_SECRET` | Refresh token secret | - |
+| `JWT_EXPIRATION` | Access token expiration | 15m |
 
-Key models:
-- **User**: Employees with roles (EMPLOYEE, MANAGER, HR_ADMIN)
-- **Organization**: Company/tenant
-- **DailyAttendance**: Daily attendance summary
-- **AttendanceActivity**: Individual punch records
-- **Leave**: Leave requests
-- **LeaveBalance**: Leave quota tracking
-- **Ticket**: Support tickets
-- **Claim**: Expense claims
-- **Asset**: Company assets
-- **Notification**: User notifications
-
-## Production Deployment
+## Testing
 
 ### Backend
-1. Set `NODE_ENV=production`
-2. Use a strong `JWT_SECRET` (min 32 characters)
-3. Use managed PostgreSQL (AWS RDS, Supabase, Prisma Accelerate)
-4. Enable HTTPS
-5. Set up rate limiting
-6. Configure CORS for your domain
+
+```bash
+cd backend
+npm run test        # Unit tests
+npm run test:e2e    # E2E tests
+```
 
 ### Mobile
-1. Update API base URL in `lib/core/constants/api_constants.dart`
-2. Configure signing keys for Android/iOS
-3. Build release version:
-   ```bash
-   flutter build apk --release
-   flutter build ios --release
-   ```
+
+```bash
+cd mobile
+flutter test
+```
 
 ## License
 
-MIT License - feel free to use for personal and commercial projects.
+MIT

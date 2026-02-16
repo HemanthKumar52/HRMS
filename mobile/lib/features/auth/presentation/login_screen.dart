@@ -76,6 +76,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for auth changes (e.g. if token validation finishes late)
+    ref.listen(authStateProvider, (previous, next) {
+      if (next is AsyncData && next.value != null) {
+        context.go('/');
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -90,9 +97,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                   const Icon(Icons.hub, size: 64, color: AppColors.primary).animate().scale(delay: 200.ms),
+                   Image.asset(
+                     'assets/images/pulse_logo.png',
+                     height: 80,
+                   ).animate().scale(delay: 200.ms),
                    const SizedBox(height: 16),
-                   Text('HRMS Portal', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.grey900)).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3),
                    Text('Manage your work life balance', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey500)).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
                   
                    const SizedBox(height: 48),
