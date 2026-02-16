@@ -144,12 +144,12 @@ class LeaveListItem extends StatelessWidget {
         return AppColors.success;
       case LeaveType.unpaid:
         return AppColors.warning;
-      case LeaveType.maternity:
+      case LeaveType.parental:
         return Colors.pink;
-      case LeaveType.paternity:
-        return Colors.blue;
       case LeaveType.od:
         return Colors.purpleAccent;
+      case LeaveType.compensatory:
+        return AppColors.secondary;
     }
   }
 

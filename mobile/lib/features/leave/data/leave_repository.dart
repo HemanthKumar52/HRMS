@@ -16,7 +16,7 @@ class LeaveRepository {
     required DateTime toDate,
     bool isHalfDay = false,
     HalfDayType? halfDayType,
-    String? reason,
+    required String reason,
   }) async {
     final response = await _dio.post(
       ApiConstants.leaveApply,
@@ -28,11 +28,16 @@ class LeaveRepository {
         if (halfDayType != null)
           'halfDayType':
               halfDayType == HalfDayType.firstHalf ? 'FIRST_HALF' : 'SECOND_HALF',
-        if (reason != null) 'reason': reason,
+        'reason': reason,
       },
     );
 
     return LeaveModel.fromJson(response.data['data']);
+  }
+
+  Future<LeaveModel> getLeaveById(String id) async {
+    final response = await _dio.get(ApiConstants.leaveDetail(id));
+    return LeaveModel.fromJson(response.data);
   }
 
   Future<List<LeaveBalance>> getBalance() async {

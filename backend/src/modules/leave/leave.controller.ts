@@ -43,6 +43,14 @@ export class LeaveController {
     return this.leaveService.getHistory(userId, dto);
   }
 
+  @Get(':id')
+  async getLeaveById(
+    @CurrentUser('userId') userId: string,
+    @Param('id') leaveId: string,
+  ) {
+    return this.leaveService.getLeaveById(userId, leaveId);
+  }
+
   @Patch(':id/cancel')
   async cancelLeave(
     @CurrentUser('userId') userId: string,

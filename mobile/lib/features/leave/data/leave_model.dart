@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum LeaveType { casual, sick, earned, unpaid, maternity, paternity, od }
+enum LeaveType { casual, sick, earned, unpaid, parental, od, compensatory }
 
 enum LeaveStatus { pending, approved, rejected, cancelled }
 
@@ -78,12 +78,14 @@ class LeaveModel extends Equatable {
         return LeaveType.earned;
       case 'UNPAID':
         return LeaveType.unpaid;
+      case 'PARENTAL':
       case 'MATERNITY':
-        return LeaveType.maternity;
       case 'PATERNITY':
-        return LeaveType.paternity;
+        return LeaveType.parental;
       case 'OD':
         return LeaveType.od;
+      case 'COMPENSATORY':
+        return LeaveType.compensatory;
       default:
         return LeaveType.casual;
     }

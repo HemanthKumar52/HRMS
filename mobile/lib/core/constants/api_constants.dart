@@ -29,6 +29,7 @@ class ApiConstants {
   static String leaveCancel(String id) => '/leave/$id/cancel';
   static String leaveApprove(String id) => '/leave/$id/approve';
   static String leaveReject(String id) => '/leave/$id/reject';
+  static String leaveDetail(String id) => '/leave/$id';
   static const String leavePendingApprovals = '/leave/pending-approvals';
 
   // Attendance

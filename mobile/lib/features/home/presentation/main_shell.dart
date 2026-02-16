@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_bottom_nav_bar.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/providers/notification_provider.dart';
 import '../../../core/widgets/dynamic_island_notification.dart';
@@ -27,34 +27,34 @@ class _MainShellState extends ConsumerState<MainShell> {
         final user = ref.read(currentUserProvider);
         final now = DateTime.now();
         final hour = now.hour;
-        
+
         String message;
         bool isError = false;
-        
+
         // Time-based messages
         if (hour >= 6 && hour < 12) {
           // Morning (6 AM - 12 PM)
-          message = user?.role == 'EMPLOYEE' 
-              ? "☀️ Good Morning! Don't forget to clock in"
-              : "☀️ Good Morning! Check your team's attendance";
+          message = user?.role == 'EMPLOYEE'
+              ? "Good Morning! Don't forget to clock in"
+              : "Good Morning! Check your team's attendance";
         } else if (hour >= 12 && hour < 17) {
           // Afternoon (12 PM - 5 PM)
           message = user?.role == 'EMPLOYEE'
-              ? "🌤️ Good Afternoon! Remember to take breaks"
-              : "🌤️ Good Afternoon! Review pending approvals";
+              ? "Good Afternoon! Remember to take breaks"
+              : "Good Afternoon! Review pending approvals";
         } else if (hour >= 17 && hour < 21) {
           // Evening (5 PM - 9 PM)
           message = user?.role == 'EMPLOYEE'
-              ? "🌆 Don't forget to clock out before leaving!"
-              : "🌆 Review today's team attendance";
+              ? "Don't forget to clock out before leaving!"
+              : "Review today's team attendance";
           isError = user?.role == 'EMPLOYEE'; // Warning for employees
         } else {
           // Night (9 PM - 6 AM)
-          message = "🌙 Working late? Don't forget to clock out!";
+          message = "Working late? Don't forget to clock out!";
           isError = true; // Warning for late work
         }
-        
-        DynamicIslandManager().show(context, message: message, isError: isError); 
+
+        DynamicIslandManager().show(context, message: message, isError: isError);
       });
     });
   }
@@ -64,10 +64,9 @@ class _MainShellState extends ConsumerState<MainShell> {
       final location = GoRouterState.of(context).matchedLocation;
       if (location.startsWith('/leave')) return 1;
       if (location.startsWith('/attendance')) return 2;
-      if (location.startsWith('/directory')) return 3;
+      if (location.startsWith('/finance')) return 3;
       return 0;
     } catch (e) {
-      // GoRouterState not available yet, return default
       return 0;
     }
   }
@@ -84,7 +83,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         context.go('/attendance');
         break;
       case 3:
-        context.go('/directory');
+        context.go('/finance');
         break;
     }
   }
@@ -101,7 +100,7 @@ class _MainShellState extends ConsumerState<MainShell> {
          } else {
            message = error.toString().replaceAll("Exception: ", "");
          }
-         
+
          WidgetsBinding.instance.addPostFrameCallback((_) {
             DynamicIslandManager().show(context, message: message, isError: true);
          });
@@ -111,31 +110,31 @@ class _MainShellState extends ConsumerState<MainShell> {
     final currentIndex = _getCurrentIndex(context);
 
     return Scaffold(
+      extendBody: true,
       body: widget.child,
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: GlassBottomNavBar(
         currentIndex: currentIndex,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+          GlassNavItem(
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home,
             label: 'Home',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            activeIcon: Icon(Icons.event_note),
+          GlassNavItem(
+            icon: Icons.event_note_outlined,
+            activeIcon: Icons.event_note,
             label: 'Leave',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.access_time_outlined),
-            activeIcon: Icon(Icons.access_time_filled),
+          GlassNavItem(
+            icon: Icons.access_time_outlined,
+            activeIcon: Icons.access_time_filled,
             label: 'Attendance',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Directory',
+          GlassNavItem(
+            icon: Icons.account_balance_wallet_outlined,
+            activeIcon: Icons.account_balance_wallet,
+            label: 'Finance',
           ),
         ],
       ),

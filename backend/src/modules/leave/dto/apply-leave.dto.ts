@@ -29,7 +29,7 @@ export class ApplyLeaveDto {
   @IsEnum(HalfDayType)
   halfDayType?: HalfDayType;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'Reason is required' })
   @IsString()
-  reason?: string;
+  reason: string;
 }

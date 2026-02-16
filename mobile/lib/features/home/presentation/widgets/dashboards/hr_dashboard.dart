@@ -81,11 +81,20 @@ class HRDashboard extends ConsumerWidget {
           Text('Requests Management', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           
-          _buildRequestCard('Leave Approvals', '5 Pending', Icons.calendar_today, Colors.orange),
+          _buildRequestCard(
+            'Leave Approvals', '5 Pending', Icons.calendar_today, Colors.orange,
+            onTap: () => context.push('/approvals'),
+          ),
           const SizedBox(height: 12),
-          _buildRequestCard('Expense Claims', '2 Pending', Icons.attach_money, Colors.green),
+          _buildRequestCard(
+            'Expense Claims', '2 Pending', Icons.attach_money, Colors.green,
+            onTap: () => context.push('/approvals'),
+          ),
           const SizedBox(height: 12),
-          _buildRequestCard('Onboarding Tasks', '3 Pending', Icons.person_add_alt, Colors.blue),
+          _buildRequestCard(
+            'Onboarding Tasks', '3 Pending', Icons.person_add_alt, Colors.blue,
+            onTap: () => context.push('/tasks'),
+          ),
 
           const SizedBox(height: 24),
 
@@ -109,33 +118,37 @@ class HRDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildRequestCard(String title, String status, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 12)),
-              ],
+  Widget _buildRequestCard(String title, String status, IconData icon, Color color, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.grey200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, color: color),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }

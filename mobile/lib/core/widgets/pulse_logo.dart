@@ -17,56 +17,51 @@ class PulseLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Icon Section
+        // Purple user icon from assets (no clipping)
+        Image.asset(
+          'assets/images/purple-user-icon.png',
+          width: 56 * size,
+          height: 56 * size,
+          fit: BoxFit.contain,
+        ),
+        SizedBox(width: 12 * size),
+
+        // pPULSE text in white pill
         Container(
-          width: 40 * size,
-          height: 40 * size,
+          padding: EdgeInsets.symmetric(
+            horizontal: 20 * size,
+            vertical: 10 * size,
+          ),
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF8B5CF6), // Purple
-                const Color(0xFF6366F1), // Indigo
-              ],
-            ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(100),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                color: Colors.black.withOpacity(0.08),
                 blurRadius: 8,
-                offset: const Offset(0, 4),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Icon(
-            Icons.person, // Or Icons.person_rounded
-            color: Colors.white,
-            size: 24 * size,
-          ),
-        ),
-        SizedBox(width: 12 * size),
-        
-        // Text Section
-        RichText(
-          text: TextSpan(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextSpan(
-                text: 'p',
-                style: GoogleFonts.playfairDisplay(
-                  color: textColor,
-                  fontSize: 36 * size,
+              Text(
+                'p',
+                style: GoogleFonts.inter(
+                  fontSize: 26 * size,
                   fontWeight: FontWeight.w900,
                   fontStyle: FontStyle.italic,
+                  color: textColor,
                 ),
               ),
-              TextSpan(
-                text: 'PULSE',
-                style: GoogleFonts.outfit(
+              Text(
+                'PULSE',
+                style: GoogleFonts.inter(
+                  fontSize: 28 * size,
+                  fontWeight: FontWeight.w300,
+                  fontStyle: FontStyle.italic,
                   color: textColor,
-                  fontSize: 32 * size,
-                  fontWeight: FontWeight.w300, 
-                  letterSpacing: 2.0,
                 ),
               ),
             ],

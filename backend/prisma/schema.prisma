@@ -104,6 +104,9 @@ enum LeaveType {
   SICK
   EARNED
   UNPAID
+  PARENTAL
+  OD
+  COMPENSATORY
 }
 
 enum LeaveStatus {
@@ -295,16 +298,19 @@ model AttendanceActivity {
 }
 
 model Ticket {
-  id          String         @id @default(uuid())
-  userId      String
-  user        User           @relation(fields: [userId], references: [id])
-  subject     String
-  description String
-  department  String
-  priority    TicketPriority @default(MEDIUM)
-  status      TicketStatus   @default(OPEN)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  subject       String
+  description   String
+  department    String
+  priority      TicketPriority @default(MEDIUM)
+  status        TicketStatus   @default(OPEN)
+  assignedToId  String?        @map("assigned_to_id")
+  resolvedAt    DateTime?      @map("resolved_at")
+  resolution    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@map("tickets")
 }

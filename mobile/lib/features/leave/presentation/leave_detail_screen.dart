@@ -113,8 +113,29 @@ class LeaveDetailScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          if (leave.status == LeaveStatus.pending)
+          const SizedBox(height: 16),
+          // Track Status button
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: () => context.pushNamed(
+                'leave-track',
+                pathParameters: {'id': leaveId},
+              ),
+              icon: const Icon(Icons.timeline),
+              label: const Text('Track Status'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF97316),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          if (leave.status == LeaveStatus.pending) ...[
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -127,6 +148,7 @@ class LeaveDetailScreen extends ConsumerWidget {
                 child: const Text('Cancel Request'),
               ),
             ),
+          ],
         ],
       ),
     );

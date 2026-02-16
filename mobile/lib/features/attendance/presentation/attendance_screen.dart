@@ -8,11 +8,13 @@ import 'package:dio/dio.dart';
 
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/connectivity_service.dart';
-import '../../../core/services/offline_queue_service.dart';
-import '../../../core/services/sync_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/check_in_type_dialog.dart';
+import '../../../core/widgets/face_verification_dialog.dart';
 import '../../../shared/providers/work_mode_provider.dart';
+import '../../../shared/providers/login_method_provider.dart';
 import '../data/attendance_model.dart';
 import '../providers/attendance_provider.dart';
 
@@ -27,21 +29,42 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _isPunching = false;
   LatLng? _currentLocation;
   bool _isInsideGeofence = false;
-  final LatLng _officeLocation = const LatLng(12.9669, 80.2459); // Olympia Pinnacle, Thoraipakkam (Approx)
+  final LatLng _officeLocation = const LatLng(12.9669, 80.2459);
   final MapController _mapController = MapController();
   List<LatLng> _routePoints = [];
   bool _isLoadingRoute = false;
   double _distanceToOffice = 0;
   bool _isSimulated = false;
   bool _isMapReady = false;
+  CheckInType? _selectedCheckInType;
+  String? _facePhotoPath;
 
   @override
   void initState() {
     super.initState();
-    // Delay location updates until map is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startLocationUpdates();
     });
+  }
+
+  /// Get button color based on login method
+  Color _getButtonColor(LoginMethod loginMethod, bool isClockedIn) {
+    if (isClockedIn) {
+      // Clock out state - use red tones
+      return AppColors.error;
+    }
+
+    // Clock in state - color based on login method
+    switch (loginMethod) {
+      case LoginMethod.biometric:
+        return AppColors.biometricLogin; // Green
+      case LoginMethod.phone:
+        return AppColors.phoneLogin; // Violet
+      case LoginMethod.faceId:
+        return AppColors.faceIdLogin; // Orange
+      case LoginMethod.password:
+        return AppColors.passwordLogin; // Blue
+    }
   }
 
   void _startLocationUpdates() async {
@@ -49,9 +72,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location services are disabled. Please enable them.')),
-          );
+          _showLocationServiceDialog();
         }
         return;
       }
@@ -78,35 +99,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         return;
       }
 
-      // Get initial position with high accuracy
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       if (mounted) {
          setState(() {
             _currentLocation = LatLng(pos.latitude, pos.longitude);
             _checkGeofence();
          });
 
-         // Center map on user's actual location (only if map is ready)
          if (_isMapReady) {
            try {
              _mapController.move(_currentLocation!, 16);
            } catch (e) {
-             print('Map controller not ready: $e');
+             debugPrint('Map controller not ready: $e');
            }
          }
-
-         print('📍 Current Location: ${pos.latitude}, ${pos.longitude}');
-         print('🏢 Office Location: ${_officeLocation.latitude}, ${_officeLocation.longitude}');
       }
 
-      // Start listening for location updates
       Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          distanceFilter: 5, // Update every 5 meters
+          distanceFilter: 5,
         )
       ).listen((Position position) {
         if (_isSimulated) return;
@@ -115,7 +130,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             _currentLocation = LatLng(position.latitude, position.longitude);
             _checkGeofence();
           });
-          print('📍 Location updated: ${position.latitude}, ${position.longitude}');
         }
       });
     } catch (e) {
@@ -127,12 +141,47 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
    }
 
+  /// Show dialog to enable location services
+  void _showLocationServiceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.location_off, color: AppColors.warning),
+            SizedBox(width: 12),
+            Text('Location Required'),
+          ],
+        ),
+        content: const Text(
+          'Location services are disabled. Please enable location to mark attendance.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await Geolocator.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+            ),
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _checkGeofence() {
     if (_currentLocation == null) return;
     final distance = const Distance().as(LengthUnit.Meter, _currentLocation!, _officeLocation);
     setState(() {
       _distanceToOffice = distance;
-      _isInsideGeofence = distance <= 200; // 200m Radius
+      _isInsideGeofence = distance <= 200;
     });
   }
 
@@ -140,18 +189,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     setState(() {
       _isSimulated = true;
       _currentLocation = _officeLocation;
-      _routePoints = []; // Clear route if any
+      _routePoints = [];
       _checkGeofence();
     });
     if (_isMapReady) {
       try {
         _mapController.move(_officeLocation, 18);
       } catch (e) {
-        print('Map controller error: $e');
+        debugPrint('Map controller error: $e');
       }
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('📍 Location simulated at Office')),
+      const SnackBar(content: Text('Location simulated at Office')),
     );
   }
 
@@ -160,28 +209,27 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Current location unknown')));
       return;
     }
-    
+
     setState(() => _isLoadingRoute = true);
-    
+
     try {
       final dio = Dio();
       final response = await dio.get(
         'http://router.project-osrm.org/route/v1/driving/${_currentLocation!.longitude},${_currentLocation!.latitude};${_officeLocation.longitude},${_officeLocation.latitude}?overview=full&geometries=geojson'
       );
-      
+
       if (response.statusCode == 200 && response.data['code'] == 'Ok') {
         final routes = response.data['routes'] as List;
         if (routes.isNotEmpty) {
            final geometry = routes[0]['geometry'];
            final coordinates = geometry['coordinates'] as List;
            final points = coordinates.map((coord) => LatLng(coord[1].toDouble(), coord[0].toDouble())).toList();
-           
+
            setState(() {
              _routePoints = points;
            });
-           
+
            if (points.isNotEmpty && _isMapReady) {
-             // Calculate bounds
              double minLat = points.first.latitude;
              double maxLat = points.first.latitude;
              double minLng = points.first.longitude;
@@ -203,7 +251,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                  )
                );
              } catch (e) {
-               print('Map controller error: $e');
+               debugPrint('Map controller error: $e');
              }
            }
         }
@@ -217,18 +265,54 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  Future<void> _handlePunch(PunchType punchType, {bool isOD = false}) async {
+  /// Handle clock in/out toggle
+  Future<void> _handlePunchToggle(bool isClockedIn) async {
+    final punchType = isClockedIn ? PunchType.clockOut : PunchType.clockIn;
     final workModeNotifier = ref.read(workModeProvider.notifier);
     final workMode = ref.read(workModeProvider);
-    
+
     String? locationAddress;
     double? capturedLat;
     double? capturedLong;
-    
-    // For ON_DUTY mode: Capture location and address
-    if (workMode == 'ON_DUTY') {
+
+    // For mobile check-in (non-office), ask for check-in type
+    if (!isClockedIn && workMode != 'OFFICE' && workMode != 'REMOTE') {
+      final checkInType = await showCheckInTypeDialog(context);
+      if (checkInType == null) {
+        return; // User cancelled
+      }
+      _selectedCheckInType = checkInType;
+    }
+
+    // Face verification for clock in (required for all modes)
+    if (!isClockedIn) {
+      final photoPath = await showFaceVerificationDialog(context);
+      if (photoPath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Face verification required to clock in'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+      _facePhotoPath = photoPath;
+    }
+
+    // Location capture for ON_DUTY and FIELD modes
+    if (workMode == 'ON_DUTY' || _selectedCheckInType != null) {
       try {
-        // Request location permission if not granted
+        // Check if location service is enabled
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          if (mounted) {
+            _showLocationServiceDialog();
+          }
+          return;
+        }
+
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
           permission = await Geolocator.requestPermission();
@@ -236,7 +320,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Location permission required for On Duty mode'),
+                  content: Text('Location permission required'),
                   backgroundColor: AppColors.error,
                 ),
               );
@@ -244,35 +328,30 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             return;
           }
         }
-        
-        // Get current location with high accuracy
+
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
-        
+
         capturedLat = position.latitude;
         capturedLong = position.longitude;
-        
-        // Get address from coordinates using geocoding
+
+        // Reverse geocoding for address
         try {
           final placemarks = await placemarkFromCoordinates(
             position.latitude,
             position.longitude,
           );
-          
+
           if (placemarks.isNotEmpty) {
             final place = placemarks.first;
             locationAddress = '${place.street}, ${place.subLocality}, ${place.locality}, ${place.administrativeArea} ${place.postalCode}';
           }
         } catch (e) {
-          print('Geocoding error: $e');
+          debugPrint('Geocoding error: $e');
           locationAddress = 'Lat: ${position.latitude.toStringAsFixed(6)}, Long: ${position.longitude.toStringAsFixed(6)}';
         }
-        
-        print('📍 ON_DUTY Location captured:');
-        print('   Coordinates: $capturedLat, $capturedLong');
-        print('   Address: $locationAddress');
-        
+
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -285,12 +364,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         return;
       }
     }
-    
-    // Biometric Security Check (only for OFFICE mode)
+
+    // Biometric check for OFFICE mode
     if (workModeNotifier.requiresBiometric) {
       final bioService = ref.read(biometricServiceProvider);
       final authenticated = await bioService.authenticate(reason: 'Authenticate to mark attendance');
-      
+
       if (!authenticated) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -304,16 +383,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     setState(() => _isPunching = true);
 
     try {
-      // Use captured location for ON_DUTY, current location for others
-      final lat = workMode == 'ON_DUTY' ? capturedLat : _currentLocation?.latitude;
-      final long = workMode == 'ON_DUTY' ? capturedLong : _currentLocation?.longitude;
-      
+      final lat = (workMode == 'ON_DUTY' || _selectedCheckInType != null) ? capturedLat : _currentLocation?.latitude;
+      final long = (workMode == 'ON_DUTY' || _selectedCheckInType != null) ? capturedLong : _currentLocation?.longitude;
+
       await ref.read(punchProvider.notifier).punch(
             punchType: punchType,
             latitude: lat,
             longitude: long,
-            address: locationAddress, // Send address to backend
-            workMode: workMode, // Send work mode
+            address: locationAddress,
+            workMode: workMode,
           );
 
       final result = ref.read(punchProvider).value;
@@ -322,11 +400,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ref.invalidate(attendanceSummaryProvider);
 
       if (mounted) {
-        String msg = workMode == 'ON_DUTY' 
-            ? '${punchType == PunchType.clockIn ? "Clock In" : "Clock Out"} recorded at: $locationAddress'
-            : (punchType == PunchType.clockIn ? 'Clocked In' : 'Clocked Out');
+        String msg;
+        if (_selectedCheckInType != null) {
+          msg = '${punchType == PunchType.clockIn ? "Clock In" : "Clock Out"} (${_selectedCheckInType!.displayName}) at: $locationAddress';
+        } else if (workMode == 'ON_DUTY') {
+          msg = '${punchType == PunchType.clockIn ? "Clock In" : "Clock Out"} recorded at: $locationAddress';
+        } else {
+          msg = punchType == PunchType.clockIn ? 'Clocked In Successfully' : 'Clocked Out Successfully';
+        }
         if (result?.isOffline == true) msg += ' (Offline)';
-        
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
           backgroundColor: AppColors.success,
@@ -338,31 +421,40 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isPunching = false);
+        setState(() {
+          _isPunching = false;
+          _selectedCheckInType = null;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    Responsive.init(context);
     final todayAsync = ref.watch(todayStatusProvider);
     final isOnline = ref.watch(isOnlineProvider);
     final workMode = ref.watch(workModeProvider);
     final workModeNotifier = ref.read(workModeProvider.notifier);
+    final loginMethod = ref.watch(loginMethodProvider);
 
-    // Determine if we should show the map
-    final showMap = workMode != 'REMOTE'; // Remote workers don't need map
-    final showGeofence = workModeNotifier.requiresGeofence; // Only office mode
+    final showMap = workMode != 'REMOTE';
+    final showGeofence = workModeNotifier.requiresGeofence;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-          // MAP SECTION (conditional based on work mode)
-          if (showMap)
-            SizedBox(
-              height: 350,
-              child: Stack(
+    // Responsive map height
+    final mapHeight = Responsive.value(mobile: 300.0, tablet: 400.0);
+
+    return SafeScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Attendance',
+      ),
+      body: Column(
+        children: [
+        // MAP SECTION
+        if (showMap)
+          SizedBox(
+            height: mapHeight,
+            child: Stack(
                 children: [
                   FlutterMap(
                     mapController: _mapController,
@@ -373,7 +465,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         setState(() {
                           _isMapReady = true;
                         });
-                        // Move to current location once map is ready
                         if (_currentLocation != null) {
                           _mapController.move(_currentLocation!, 16);
                         }
@@ -384,7 +475,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.kaaspro.hrms',
                       ),
-                      // Geofence Circle (only for office mode)
                       if (showGeofence)
                         CircleLayer(
                           circles: [
@@ -394,11 +484,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               borderColor: AppColors.primary,
                               borderStrokeWidth: 2,
                               useRadiusInMeter: true,
-                              radius: 200, // 200m Geofence
+                              radius: 200,
                             ),
                           ],
                         ),
-                      // Route Line
                       if (_routePoints.isNotEmpty)
                         PolylineLayer(
                           polylines: [
@@ -409,7 +498,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             ),
                           ],
                         ),
-                      // User Marker
                       if (_currentLocation != null)
                         MarkerLayer(
                           markers: [
@@ -419,7 +507,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               height: 60,
                               child: const Icon(Icons.person_pin_circle, color: Colors.blueAccent, size: 40),
                             ),
-                            // Office Marker (only for office mode)
                             if (showGeofence)
                               Marker(
                                 point: _officeLocation,
@@ -434,23 +521,26 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         ),
                     ],
                   ),
-                  // Overlay Status
+                  // Overlay Status Card
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + 10,
-                    left: 16,
-                    right: 16,
+                    top: Responsive.value(mobile: 10.0, tablet: 16.0),
+                    left: Responsive.horizontalPadding,
+                    right: Responsive.horizontalPadding,
                     child: Card(
                       elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.cardRadius)),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.horizontalPadding,
+                          vertical: Responsive.value(mobile: 12.0, tablet: 16.0),
+                        ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
                               children: [
                                 Icon(
-                                  showGeofence 
+                                  showGeofence
                                     ? (_isInsideGeofence ? Icons.verified_user : Icons.location_off)
                                     : Icons.location_on,
                                   color: showGeofence
@@ -464,22 +554,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                     children: [
                                       Text(
                                         showGeofence
-                                          ? (_isInsideGeofence 
-                                              ? 'You are in Office Zone' 
+                                          ? (_isInsideGeofence
+                                              ? 'You are in Office Zone'
                                               : 'Outside Office (${(_distanceToOffice / 1000).toStringAsFixed(1)} km away)')
                                           : 'Location: ${workMode ?? 'Field'}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: Responsive.sp(14),
+                                        ),
                                       ),
                                       Text(
                                         showGeofence ? 'Olympia Pinnacle, Thoraipakkam' : 'GPS tracking active',
-                                        style: const TextStyle(fontSize: 12, color: Colors.grey)
+                                        style: TextStyle(fontSize: Responsive.sp(12), color: Colors.grey),
                                       ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            // Directions Button
                             if (showGeofence && !_isInsideGeofence)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 12),
@@ -505,10 +597,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                            onPressed: _isLoadingRoute ? null : _fetchRoute,
                                            style: OutlinedButton.styleFrom(
                                               foregroundColor: Colors.blue,
-                                              side: const BorderSide(color: Colors.blue), 
+                                              side: const BorderSide(color: Colors.blue),
                                            ),
-                                           icon: _isLoadingRoute 
-                                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                                           icon: _isLoadingRoute
+                                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                                               : const Icon(Icons.directions, size: 18),
                                            label: Text(_routePoints.isEmpty ? "Show Route on Map" : "Refresh Route"),
                                         ),
@@ -528,154 +620,219 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           // CONTROLS SECTION
           Expanded(
             child: todayAsync.when(
-              data: (status) => SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // OFFICE PUNCH CARD
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                             Text(
-                                workMode == 'ON_DUTY' ? "On Duty Attendance" : 
-                                workMode == 'REMOTE' ? "Remote Attendance" : "Office Attendance",
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
-                             ),
-                             if (workMode == 'ON_DUTY')
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.info_outline, size: 16, color: Colors.blue),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        "GPS location will be captured",
-                                        style: TextStyle(color: Colors.grey[700], fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                             const SizedBox(height: 16),
-                             Row(
-                               children: [
-                                 Expanded(
-                                   child: _buildPunchButton(
-                                     context, 
-                                     label: "Clock In", 
-                                     icon: Icons.login, 
-                                     color: AppColors.success, 
-                                     // Enable logic based on work mode:
-                                     // Office: requires geofence
-                                     // Remote/Field/OD: no geofence required
-                                     isEnabled: !_isPunching && 
-                                       (workModeNotifier.requiresGeofence ? _isInsideGeofence : true) && 
-                                       !status.isClockedIn,
-                                     onTap: () => _handlePunch(PunchType.clockIn),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 12),
-                                 Expanded(
-                                   child: _buildPunchButton(
-                                     context, 
-                                     label: "Clock Out", 
-                                     icon: Icons.logout, 
-                                     color: AppColors.error, 
-                                     isEnabled: !_isPunching && 
-                                       (workModeNotifier.requiresGeofence ? _isInsideGeofence : true) && 
-                                       status.isClockedIn,
-                                     onTap: () => _handlePunch(PunchType.clockOut),
-                                   ),
-                                 ),
-                               ],
-                             ),
-                             if (workModeNotifier.requiresGeofence && !_isInsideGeofence)
-                               Padding(
-                                 padding: const EdgeInsets.only(top: 12),
-                                 child: Text("Move closer to office to mark attendance.", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              data: (status) {
+                final buttonColor = _getButtonColor(loginMethod, status.isClockedIn);
+                final buttonText = status.isClockedIn ? 'Clock Out' : 'Clock In';
+                final buttonIcon = status.isClockedIn ? Icons.logout : Icons.login;
+
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(Responsive.horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ATTENDANCE CARD
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.cardRadius)),
+                        child: Padding(
+                          padding: EdgeInsets.all(Responsive.value(mobile: 16.0, tablet: 24.0)),
+                          child: Column(
+                            children: [
+                               Text(
+                                  workMode == 'ON_DUTY' ? "On Duty Attendance" :
+                                  workMode == 'REMOTE' ? "Remote Attendance" : "Office Attendance",
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
                                ),
+
+                               // Login method indicator
+                               Padding(
+                                 padding: EdgeInsets.only(top: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                                 child: Row(
+                                   mainAxisAlignment: MainAxisAlignment.center,
+                                   children: [
+                                     Container(
+                                       padding: EdgeInsets.symmetric(
+                                         horizontal: Responsive.value(mobile: 12.0, tablet: 16.0),
+                                         vertical: Responsive.value(mobile: 4.0, tablet: 6.0),
+                                       ),
+                                       decoration: BoxDecoration(
+                                         color: _getButtonColor(loginMethod, false).withOpacity(0.1),
+                                         borderRadius: BorderRadius.circular(20),
+                                         border: Border.all(
+                                           color: _getButtonColor(loginMethod, false).withOpacity(0.3),
+                                         ),
+                                       ),
+                                       child: Row(
+                                         mainAxisSize: MainAxisSize.min,
+                                         children: [
+                                           Icon(
+                                             _getLoginMethodIcon(loginMethod),
+                                             size: Responsive.sp(14),
+                                             color: _getButtonColor(loginMethod, false),
+                                           ),
+                                           SizedBox(width: Responsive.value(mobile: 6.0, tablet: 8.0)),
+                                           Text(
+                                             'Logged in via ${loginMethod.displayName}',
+                                             style: TextStyle(
+                                               fontSize: Responsive.sp(11),
+                                               color: _getButtonColor(loginMethod, false),
+                                               fontWeight: FontWeight.w500,
+                                             ),
+                                           ),
+                                         ],
+                                       ),
+                                     ),
+                                   ],
+                                 ),
+                               ),
+
+                               if (workMode == 'ON_DUTY' || workMode != 'OFFICE' && workMode != 'REMOTE')
+                                  Padding(
+                                    padding: EdgeInsets.only(top: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.info_outline, size: Responsive.sp(16), color: Colors.blue),
+                                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                                        Text(
+                                          "GPS location & face verification required",
+                                          style: TextStyle(color: Colors.grey[700], fontSize: Responsive.sp(12)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                               SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
+
+                               // SINGLE CLOCK IN/OUT BUTTON
+                               SizedBox(
+                                 width: double.infinity,
+                                 height: Responsive.value(mobile: 56.0, tablet: 64.0),
+                                 child: ElevatedButton.icon(
+                                   onPressed: _isPunching ||
+                                       (workModeNotifier.requiresGeofence && !_isInsideGeofence)
+                                       ? null
+                                       : () => _handlePunchToggle(status.isClockedIn),
+                                   style: ElevatedButton.styleFrom(
+                                     backgroundColor: buttonColor,
+                                     foregroundColor: Colors.white,
+                                     disabledBackgroundColor: Colors.grey[300],
+                                     disabledForegroundColor: Colors.grey[500],
+                                     shape: RoundedRectangleBorder(
+                                       borderRadius: BorderRadius.circular(Responsive.cardRadius),
+                                     ),
+                                     elevation: 4,
+                                   ),
+                                   icon: _isPunching
+                                       ? SizedBox(
+                                           width: Responsive.sp(24),
+                                           height: Responsive.sp(24),
+                                           child: const CircularProgressIndicator(
+                                             strokeWidth: 2,
+                                             valueColor: AlwaysStoppedAnimation(Colors.white),
+                                           ),
+                                         )
+                                       : Icon(buttonIcon, size: Responsive.sp(28)),
+                                   label: Text(
+                                     _isPunching ? 'Processing...' : buttonText,
+                                     style: TextStyle(
+                                       fontSize: Responsive.sp(18),
+                                       fontWeight: FontWeight.bold,
+                                     ),
+                                   ),
+                                 ),
+                               ),
+
+                               if (workModeNotifier.requiresGeofence && !_isInsideGeofence)
+                                 Padding(
+                                   padding: EdgeInsets.only(top: Responsive.value(mobile: 12.0, tablet: 16.0)),
+                                   child: Text(
+                                     "Move closer to office to mark attendance.",
+                                     style: TextStyle(color: Colors.grey[600], fontSize: Responsive.sp(12)),
+                                   ),
+                                 ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
+
+                      // Logic Note
+                      Container(
+                        padding: EdgeInsets.all(Responsive.value(mobile: 12.0, tablet: 16.0)),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(Responsive.cardRadius * 0.5),
+                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: Responsive.sp(18), color: Colors.blue),
+                            SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                            Expanded(
+                              child: Text(
+                                "Face verification required for clock in. Location captured for field work.",
+                                style: TextStyle(fontSize: Responsive.sp(12), color: Colors.blue),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
 
-
-
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Logic Note
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                      ),
-                      child: const Row(
+                      // Stats Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Icon(Icons.info_outline, size: 18, color: Colors.blue),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Calculated from First Entry to Last Exit. Breaks are not deducted.",
-                              style: TextStyle(fontSize: 12, color: Colors.blue),
-                            ),
-                          ),
+                           _buildStat("Clock In", status.clockInTime?.timeOnly ?? '--:--'),
+                           _buildStat("Clock Out", status.clockOutTime?.timeOnly ?? '--:--'),
+                           _buildStat("Total Hrs", status.totalHours),
                         ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    // Stats Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                         _buildStat("Clock In", status.clockInTime?.timeOnly ?? '--:--'),
-                         _buildStat("Clock Out", status.clockInTime?.timeOnly ?? '--:--'),
-                         _buildStat("Total Hrs", status.totalHours),
-                      ],
-                    )
-                  ],
-                ),
-              ),
+                      )
+                    ],
+                  ),
+                );
+              },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text("Error: $e")),
             ),
           ),
         ],
       ),
-    ),
-  );
-  }
-
-  Widget _buildPunchButton(BuildContext context, {required String label, required IconData icon, required Color color, required bool isEnabled, required VoidCallback onTap}) {
-    return ElevatedButton.icon(
-      onPressed: isEnabled ? onTap : null,
-      style: ElevatedButton.styleFrom(
-         backgroundColor: color,
-         foregroundColor: Colors.white,
-         padding: const EdgeInsets.symmetric(vertical: 16),
-         disabledBackgroundColor: Colors.grey[300],
-         disabledForegroundColor: Colors.grey[500],
-      ),
-      icon: Icon(icon),
-      label: Text(label),
     );
   }
-  
+
+  IconData _getLoginMethodIcon(LoginMethod method) {
+    switch (method) {
+      case LoginMethod.biometric:
+        return Icons.fingerprint;
+      case LoginMethod.phone:
+        return Icons.phone_android;
+      case LoginMethod.faceId:
+        return Icons.face;
+      case LoginMethod.password:
+        return Icons.password;
+    }
+  }
+
   Widget _buildStat(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: Responsive.sp(16),
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: Responsive.sp(12),
+          ),
+        ),
       ],
     );
   }

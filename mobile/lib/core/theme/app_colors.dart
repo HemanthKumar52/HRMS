@@ -42,4 +42,10 @@ class AppColors {
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceDark = Color(0xFF1F2937);
   static const Color backgroundDark = Color(0xFF111827);
+
+  // Login Method Colors for Attendance Button
+  static const Color biometricLogin = Color(0xFF10B981);  // Green
+  static const Color phoneLogin = Color(0xFF7C3AED);       // Violet
+  static const Color faceIdLogin = Color(0xFFF97316);      // Orange
+  static const Color passwordLogin = Color(0xFF2563EB);    // Blue (default)
 }

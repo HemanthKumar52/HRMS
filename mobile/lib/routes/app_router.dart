@@ -11,6 +11,7 @@ import '../features/home/presentation/main_shell.dart';
 import '../features/leave/presentation/leave_screen.dart';
 import '../features/leave/presentation/apply_leave_screen.dart';
 import '../features/leave/presentation/leave_detail_screen.dart';
+import '../features/leave/presentation/leave_track_screen.dart';
 import '../features/attendance/presentation/attendance_screen.dart';
 import '../features/directory/presentation/directory_screen.dart';
 import '../features/directory/presentation/employee_detail_screen.dart';
@@ -26,6 +27,8 @@ import '../features/home/presentation/create_ticket_screen.dart';
 import '../features/home/presentation/approvals_screen.dart';
 import '../features/auth/presentation/work_mode_selection_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
+import '../features/finance/presentation/finance_screen.dart';
 import '../shared/providers/work_mode_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -105,6 +108,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const ApplyLeaveScreen(),
               ),
               GoRoute(
+                path: ':id/track',
+                name: 'leave-track',
+                parentNavigatorKey: _rootNavigatorKey,
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return LeaveTrackScreen(leaveId: id);
+                },
+              ),
+              GoRoute(
                 path: ':id',
                 name: 'leave-detail',
                 parentNavigatorKey: _rootNavigatorKey,
@@ -180,6 +192,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/profile',
             name: 'profile',
             builder: (context, state) => const ProfileScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/finance',
+            name: 'finance',
+            builder: (context, state) => const FinanceScreen(),
           ),
         ],
       ),

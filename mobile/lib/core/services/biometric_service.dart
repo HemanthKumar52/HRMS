@@ -9,6 +9,15 @@ final biometricServiceProvider = Provider<BiometricService>((ref) {
 class BiometricService {
   final LocalAuthentication auth = LocalAuthentication();
 
+  /// Check if biometric authentication is available
+  Future<bool> get canCheckBiometrics async {
+    try {
+      return await auth.canCheckBiometrics;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> isDeviceSupported() async {
     try {
       final isSupported = await auth.isDeviceSupported();

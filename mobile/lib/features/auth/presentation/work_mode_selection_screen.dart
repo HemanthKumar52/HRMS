@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/responsive.dart';
 import '../../../shared/providers/work_mode_provider.dart';
 
 class WorkModeSelectionScreen extends ConsumerWidget {
@@ -9,28 +10,30 @@ class WorkModeSelectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                'Select Work Mode',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose how you\'re working today',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-              ),
-              const SizedBox(height: 32),
+    Responsive.init(context);
+    return SafeScaffold(
+      body: Padding(
+        padding: EdgeInsets.all(Responsive.value(mobile: 20.0, tablet: 32.0)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: Responsive.value(mobile: 20.0, tablet: 32.0)),
+            Text(
+              'Select Work Mode',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: Responsive.sp(26),
+                  ),
+            ),
+            SizedBox(height: Responsive.value(mobile: 8.0, tablet: 12.0)),
+            Text(
+              'Choose how you\'re working today',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.grey[600],
+                    fontSize: Responsive.sp(16),
+                  ),
+            ),
+            SizedBox(height: Responsive.value(mobile: 28.0, tablet: 40.0)),
               Expanded(
                 child: ListView(
                   children: [
@@ -50,7 +53,7 @@ class WorkModeSelectionScreen extends ConsumerWidget {
                         context.go('/');
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: Responsive.horizontalPadding),
                     _WorkModeCard(
                       title: 'Remote',
                       description: 'Working from home',
@@ -66,7 +69,7 @@ class WorkModeSelectionScreen extends ConsumerWidget {
                         context.go('/');
                       },
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: Responsive.horizontalPadding),
                     _WorkModeCard(
                       title: 'On Duty (OD)',
                       description: 'Field visits and tasks',
@@ -89,8 +92,7 @@ class WorkModeSelectionScreen extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -113,30 +115,31 @@ class _WorkModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Responsive.init(context);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.cardRadius),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Responsive.cardRadius),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(Responsive.value(mobile: 16.0, tablet: 24.0)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(Responsive.value(mobile: 12.0, tablet: 16.0)),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(Responsive.cardRadius),
                     ),
-                    child: Icon(icon, color: color, size: 28),
+                    child: Icon(icon, color: color, size: Responsive.sp(28)),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: Responsive.horizontalPadding),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,48 +148,52 @@ class _WorkModeCard extends StatelessWidget {
                           title,
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: Responsive.sp(18),
                               ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: Responsive.value(mobile: 4.0, tablet: 6.0)),
                         Text(
                           description,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Colors.grey[600],
+                                fontSize: Responsive.sp(14),
                               ),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 20),
+                  Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: Responsive.sp(20)),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: Responsive.horizontalPadding),
               const Divider(),
-              const SizedBox(height: 12),
+              SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
               Text(
                 'Requirements:',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[700],
+                      fontSize: Responsive.sp(13),
                     ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: Responsive.value(mobile: 8.0, tablet: 12.0)),
               ...requirements.map((req) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: EdgeInsets.only(bottom: Responsive.value(mobile: 6.0, tablet: 8.0)),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.check_circle,
-                          size: 18,
+                          size: Responsive.sp(18),
                           color: color,
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
                         Expanded(
                           child: Text(
                             req,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Colors.grey[700],
+                                  fontSize: Responsive.sp(12),
                                 ),
                           ),
                         ),

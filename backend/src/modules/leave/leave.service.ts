@@ -139,6 +139,32 @@ export class LeaveService {
     };
   }
 
+  async getLeaveById(userId: string, leaveId: string) {
+    const leave = await this.prisma.leave.findFirst({
+      where: { id: leaveId, userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            managerId: true,
+            manager: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!leave) {
+      throw new NotFoundException('Leave not found');
+    }
+
+    return leave;
+  }
+
   async cancelLeave(userId: string, leaveId: string) {
     const leave = await this.prisma.leave.findFirst({
       where: { id: leaveId, userId },
