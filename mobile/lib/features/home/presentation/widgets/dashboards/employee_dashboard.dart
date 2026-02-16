@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 import '../../../../auth/providers/auth_provider.dart';
 import '../../../../attendance/providers/attendance_provider.dart';
 import '../../../../leave/providers/leave_provider.dart';
@@ -173,39 +174,34 @@ class EmployeeDashboard extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // View Profile Button (Performance & Skills moved to Profile)
-            InkWell(
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: 12,
+              padding: const EdgeInsets.all(16),
               onTap: () => context.push('/profile'),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.grey200),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.person_outline, color: AppColors.primary),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('My Profile', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text('View skills, performance & details', style: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 12)),
-                        ],
-                      ),
+                    child: const Icon(Icons.person_outline, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('My Profile', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('View skills, performance & details', style: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 12)),
+                      ],
                     ),
-                    const Icon(Icons.chevron_right, color: AppColors.grey400),
-                  ],
-                ),
+                  ),
+                  const Icon(Icons.chevron_right, color: AppColors.grey400),
+                ],
               ),
             ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
 
@@ -252,14 +248,14 @@ class EmployeeDashboard extends ConsumerWidget {
   }
 
   Widget _buildNotificationItem(BuildContext context, String title, String body, bool isRead) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: ListTile(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        blur: 10,
+        opacity: 0.15,
+        borderRadius: 12,
+        padding: EdgeInsets.zero,
+        child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           width: 40,
@@ -291,11 +287,16 @@ class EmployeeDashboard extends ConsumerWidget {
           ),
         ),
       ),
+      ),
     );
   }
 
   Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color) {
-    return InkWell(
+    return GlassCard(
+      blur: 10,
+      opacity: 0.15,
+      borderRadius: 12,
+      padding: const EdgeInsets.all(16),
       onTap: () {
         if (label == 'Raise Ticket') {
           context.push('/create-ticket');
@@ -305,21 +306,12 @@ class EmployeeDashboard extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon!')));
         }
       },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.grey200),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14)),
-          ],
-        ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14)),
+        ],
       ),
     );
   }

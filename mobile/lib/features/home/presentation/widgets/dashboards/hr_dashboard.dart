@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 import '../../../../auth/providers/auth_provider.dart';
 import '../../../../attendance/providers/attendance_provider.dart';
 import '../dashboard/attendance_timer_card.dart';
@@ -93,7 +94,7 @@ class HRDashboard extends ConsumerWidget {
           const SizedBox(height: 12),
           _buildRequestCard(
             'Onboarding Tasks', '3 Pending', Icons.person_add_alt, Colors.blue,
-            onTap: () => context.push('/tasks'),
+            onTap: () => context.push('/onboarding-tasks'),
           ),
 
           const SizedBox(height: 24),
@@ -119,36 +120,31 @@ class HRDashboard extends ConsumerWidget {
   }
 
   Widget _buildRequestCard(String title, String status, IconData icon, Color color, {VoidCallback? onTap}) {
-    return InkWell(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 12,
+      padding: const EdgeInsets.all(16),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.grey200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, color: color),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 12)),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w500, fontSize: 12)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.grey),
+        ],
       ),
     );
   }

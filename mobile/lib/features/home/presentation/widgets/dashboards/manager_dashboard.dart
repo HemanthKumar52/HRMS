@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 import '../../../../../shared/models/user_model.dart';
 import '../../../../auth/providers/auth_provider.dart';
 import '../../../../directory/providers/directory_provider.dart';
@@ -123,13 +124,11 @@ class ManagerDashboard extends ConsumerWidget {
   }
 
   Widget _buildTeamOverviewCard(List<UserModel> team) {
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
       child: Column(
         children: [
           Row(
@@ -188,15 +187,14 @@ class ManagerDashboard extends ConsumerWidget {
   }
 
   Widget _buildApprovalItem(String type, String desc, String time) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        blur: 10,
+        opacity: 0.15,
+        borderRadius: 12,
+        padding: const EdgeInsets.all(12),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -221,6 +219,7 @@ class ManagerDashboard extends ConsumerWidget {
             ],
           )
         ],
+      ),
       ),
     );
   }

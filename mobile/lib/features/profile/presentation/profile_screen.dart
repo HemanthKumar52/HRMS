@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/responsive.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/presentation/widgets/dashboard/skills_card.dart';
 import '../../home/presentation/widgets/dashboard/performance_card.dart';
@@ -113,13 +114,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: 100.ms),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
-            Container(
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: Responsive.cardRadius,
               padding: EdgeInsets.all(Responsive.horizontalPadding),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                border: Border.all(color: AppColors.grey200),
-              ),
               child: Column(
                 children: [
                   _buildDetailRow(Icons.email_outlined, 'Email', user?.email ?? 'N/A'),
@@ -138,19 +137,13 @@ class ProfileScreen extends ConsumerWidget {
             SizedBox(height: Responsive.value(mobile: 24.0, tablet: 32.0)),
 
             // Employee Directory
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => context.push('/directory'),
-                borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                child: Container(
-                  padding: EdgeInsets.all(Responsive.horizontalPadding),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                    border: Border.all(color: AppColors.grey200),
-                  ),
-                  child: Row(
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: Responsive.cardRadius,
+              padding: EdgeInsets.all(Responsive.horizontalPadding),
+              onTap: () => context.push('/directory'),
+              child: Row(
                     children: [
                       Container(
                         padding: EdgeInsets.all(Responsive.value(mobile: 10.0, tablet: 14.0)),
@@ -194,8 +187,6 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
             ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
 
             SizedBox(height: Responsive.value(mobile: 24.0, tablet: 32.0)),
@@ -238,13 +229,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: 700.ms),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
-            Container(
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: Responsive.cardRadius,
               padding: EdgeInsets.all(Responsive.horizontalPadding),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                border: Border.all(color: AppColors.grey200),
-              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

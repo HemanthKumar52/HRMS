@@ -25,6 +25,7 @@ import '../features/home/presentation/my_tasks_screen.dart';
 import '../features/home/presentation/create_claim_screen.dart';
 import '../features/home/presentation/create_ticket_screen.dart';
 import '../features/home/presentation/approvals_screen.dart';
+import '../features/home/presentation/onboarding_tasks_screen.dart';
 import '../features/auth/presentation/work_mode_selection_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -187,6 +188,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/tasks',
             name: 'tasks',
             builder: (context, state) => const MyTasksScreen(),
+          ),
+          GoRoute(
+            path: '/onboarding-tasks',
+            name: 'onboarding-tasks',
+            builder: (context, state) => const OnboardingTasksScreen(),
           ),
           GoRoute(
             path: '/profile',

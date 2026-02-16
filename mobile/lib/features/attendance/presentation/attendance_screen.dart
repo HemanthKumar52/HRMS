@@ -1,5 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,6 +16,7 @@ import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../core/widgets/check_in_type_dialog.dart';
 import '../../../core/widgets/face_verification_dialog.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../shared/providers/work_mode_provider.dart';
 import '../../../shared/providers/login_method_provider.dart';
 import '../data/attendance_model.dart';
@@ -442,363 +446,385 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final showGeofence = workModeNotifier.requiresGeofence;
 
     // Responsive map height
-    final mapHeight = Responsive.value(mobile: 300.0, tablet: 400.0);
+    final mapHeight = Responsive.value(mobile: 220.0, tablet: 300.0);
 
     return SafeScaffold(
       appBar: AdaptiveAppBar(
         title: 'Attendance',
       ),
-      body: Column(
-        children: [
-        // MAP SECTION
-        if (showMap)
-          SizedBox(
-            height: mapHeight,
-            child: Stack(
-                children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _currentLocation ?? _officeLocation,
-                      initialZoom: 15,
-                      onMapReady: () {
-                        setState(() {
-                          _isMapReady = true;
-                        });
-                        if (_currentLocation != null) {
-                          _mapController.move(_currentLocation!, 16);
-                        }
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.kaaspro.hrms',
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+          // MAP SECTION
+          if (showMap)
+            SizedBox(
+              height: mapHeight,
+              child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _currentLocation ?? _officeLocation,
+                        initialZoom: 15,
+                        onMapReady: () {
+                          setState(() {
+                            _isMapReady = true;
+                          });
+                          if (_currentLocation != null) {
+                            _mapController.move(_currentLocation!, 16);
+                          }
+                        },
                       ),
-                      if (showGeofence)
-                        CircleLayer(
-                          circles: [
-                            CircleMarker(
-                              point: _officeLocation,
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderColor: AppColors.primary,
-                              borderStrokeWidth: 2,
-                              useRadiusInMeter: true,
-                              radius: 200,
-                            ),
-                          ],
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.kaaspro.hrms',
                         ),
-                      if (_routePoints.isNotEmpty)
-                        PolylineLayer(
-                          polylines: [
-                            Polyline(
-                              points: _routePoints,
-                              color: Colors.blue,
-                              strokeWidth: 4.0,
-                            ),
-                          ],
-                        ),
-                      if (_currentLocation != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: _currentLocation!,
-                              width: 60,
-                              height: 60,
-                              child: const Icon(Icons.person_pin_circle, color: Colors.blueAccent, size: 40),
-                            ),
-                            if (showGeofence)
-                              Marker(
+                        if (showGeofence)
+                          CircleLayer(
+                            circles: [
+                              CircleMarker(
                                 point: _officeLocation,
-                                width: 80,
-                                height: 80,
-                                child: const Column(children: [
-                                   Icon(Icons.business, color: AppColors.primary, size: 30),
-                                   Text("Olympia Pinnacle", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10), overflow: TextOverflow.visible, textAlign: TextAlign.center),
-                                ]),
-                              )
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderColor: AppColors.primary,
+                                borderStrokeWidth: 2,
+                                useRadiusInMeter: true,
+                                radius: 200,
+                              ),
+                            ],
+                          ),
+                        if (_routePoints.isNotEmpty)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: _routePoints,
+                                color: Colors.blue,
+                                strokeWidth: 4.0,
+                              ),
+                            ],
+                          ),
+                        if (_currentLocation != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _currentLocation!,
+                                width: 60,
+                                height: 60,
+                                child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                              ),
+                              if (showGeofence)
+                                Marker(
+                                  point: _officeLocation,
+                                  width: 80,
+                                  height: 80,
+                                  child: const Column(children: [
+                                     Icon(Icons.business, color: AppColors.primary, size: 30),
+                                     Text("Olympia Pinnacle", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10), overflow: TextOverflow.visible, textAlign: TextAlign.center),
+                                  ]),
+                                )
+                            ],
+                          ),
+                      ],
+                    ),
+                    // Route / simulate buttons overlay
+                    if (showGeofence && !_isInsideGeofence)
+                      Positioned(
+                        top: Responsive.value(mobile: 10.0, tablet: 16.0),
+                        right: Responsive.horizontalPadding,
+                        child: Column(
+                          children: [
+                            _buildMapActionButton(
+                              icon: Icons.location_on,
+                              color: Colors.orange,
+                              onTap: _simulateLocation,
+                              tooltip: 'Simulate',
+                            ),
+                            const SizedBox(height: 8),
+                            _buildMapActionButton(
+                              icon: _isLoadingRoute ? Icons.hourglass_top : Icons.directions,
+                              color: Colors.blue,
+                              onTap: _isLoadingRoute ? null : _fetchRoute,
+                              tooltip: 'Route',
+                            ),
                           ],
                         ),
-                    ],
-                  ),
-                  // Overlay Status Card
-                  Positioned(
-                    top: Responsive.value(mobile: 10.0, tablet: 16.0),
-                    left: Responsive.horizontalPadding,
-                    right: Responsive.horizontalPadding,
-                    child: Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.cardRadius)),
-                      child: Padding(
+                      ),
+                  ],
+                ),
+              ),
+
+            // LOCATION VERIFIED BANNER
+            if (showMap)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.horizontalPadding,
+                  vertical: Responsive.value(mobile: 10.0, tablet: 14.0),
+                ),
+                decoration: BoxDecoration(
+                  color: showGeofence
+                      ? (_isInsideGeofence ? const Color(0xFF1B5E20) : Colors.orange.shade800)
+                      : Colors.blue.shade700,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      showGeofence
+                          ? (_isInsideGeofence ? Icons.verified_user : Icons.location_off)
+                          : Icons.location_on,
+                      color: Colors.white,
+                      size: Responsive.sp(18),
+                    ),
+                    SizedBox(width: Responsive.value(mobile: 10.0, tablet: 14.0)),
+                    Expanded(
+                      child: Text(
+                        showGeofence
+                            ? (_isInsideGeofence
+                                ? 'Location Verified: Olympia Pinnacle'
+                                : 'Outside Office (${(_distanceToOffice / 1000).toStringAsFixed(1)} km away)')
+                            : 'Location: ${workMode ?? 'Field'} - GPS Active',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: Responsive.sp(13),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 200.ms),
+
+            // CLOCK IN/OUT SECTION
+            todayAsync.when(
+              data: (status) {
+                final isClockedIn = status.isClockedIn;
+
+                return Padding(
+                  padding: EdgeInsets.all(Responsive.horizontalPadding),
+                  child: Column(
+                    children: [
+                      // Timer Card with glass effect
+                      GlassCard(
+                        blur: 15,
+                        opacity: 0.15,
+                        borderRadius: Responsive.cardRadius,
                         padding: EdgeInsets.symmetric(
                           horizontal: Responsive.horizontalPadding,
-                          vertical: Responsive.value(mobile: 12.0, tablet: 16.0),
+                          vertical: Responsive.value(mobile: 28.0, tablet: 36.0),
                         ),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            // Total hours - large display
+                            Text(
+                              status.totalHours,
+                              style: GoogleFonts.poppins(
+                                fontSize: Responsive.sp(48),
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.grey900,
+                              ),
+                            ).animate().fadeIn(delay: 300.ms),
+                            const SizedBox(height: 4),
+                            Text(
+                              isClockedIn ? 'Clocked In' : 'Not Clocked In',
+                              style: GoogleFonts.poppins(
+                                fontSize: Responsive.sp(14),
+                                color: isClockedIn ? AppColors.success : AppColors.grey500,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: Responsive.value(mobile: 28.0, tablet: 36.0)),
+
+                            // Circular Clock In/Out Button
+                            GestureDetector(
+                              onTap: _isPunching ||
+                                  (workModeNotifier.requiresGeofence && !_isInsideGeofence)
+                                  ? null
+                                  : () => _handlePunchToggle(isClockedIn),
+                              child: Container(
+                                width: Responsive.value(mobile: 130.0, tablet: 160.0),
+                                height: Responsive.value(mobile: 130.0, tablet: 160.0),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: isClockedIn
+                                        ? [const Color(0xFFB71C1C), const Color(0xFFE53935)]
+                                        : [const Color(0xFF1B3A4B), const Color(0xFF1B8A6B)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isClockedIn ? Colors.red : const Color(0xFF1B8A6B)).withOpacity(0.4),
+                                      blurRadius: 24,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: _isPunching
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 3,
+                                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                                        ),
+                                      )
+                                    : Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            isClockedIn ? Icons.logout : Icons.login,
+                                            color: Colors.white,
+                                            size: Responsive.sp(36),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            isClockedIn ? 'CLOCK OUT' : 'CLOCK IN',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: Responsive.sp(13),
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ).animate().scale(delay: 400.ms, duration: 500.ms, curve: Curves.easeOutBack),
+
+                            if (workModeNotifier.requiresGeofence && !_isInsideGeofence)
+                              Padding(
+                                padding: EdgeInsets.only(top: Responsive.value(mobile: 12.0, tablet: 16.0)),
+                                child: Text(
+                                  "Move closer to office to mark attendance",
+                                  style: GoogleFonts.poppins(
+                                    color: AppColors.warning,
+                                    fontSize: Responsive.sp(12),
+                                  ),
+                                ),
+                              ),
+
+                            SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
+
+                            // Biometric sync indicator
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  showGeofence
-                                    ? (_isInsideGeofence ? Icons.verified_user : Icons.location_off)
-                                    : Icons.location_on,
-                                  color: showGeofence
-                                    ? (_isInsideGeofence ? Colors.green : Colors.orange)
-                                    : Colors.blue,
+                                  _getLoginMethodIcon(loginMethod),
+                                  size: Responsive.sp(16),
+                                  color: AppColors.grey500,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        showGeofence
-                                          ? (_isInsideGeofence
-                                              ? 'You are in Office Zone'
-                                              : 'Outside Office (${(_distanceToOffice / 1000).toStringAsFixed(1)} km away)')
-                                          : 'Location: ${workMode ?? 'Field'}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: Responsive.sp(14),
-                                        ),
-                                      ),
-                                      Text(
-                                        showGeofence ? 'Olympia Pinnacle, Thoraipakkam' : 'GPS tracking active',
-                                        style: TextStyle(fontSize: Responsive.sp(12), color: Colors.grey),
-                                      ),
-                                    ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Synced with ${loginMethod.displayName}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: Responsive.sp(12),
+                                    color: AppColors.grey500,
                                   ),
                                 ),
                               ],
                             ),
-                            if (showGeofence && !_isInsideGeofence)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: _simulateLocation,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange.shade100,
-                                            foregroundColor: Colors.orange.shade900,
-                                            elevation: 0,
-                                          ),
-                                          icon: const Icon(Icons.location_on),
-                                          label: const Text('Simulate Location (Test)'),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: OutlinedButton.icon(
-                                           onPressed: _isLoadingRoute ? null : _fetchRoute,
-                                           style: OutlinedButton.styleFrom(
-                                              foregroundColor: Colors.blue,
-                                              side: const BorderSide(color: Colors.blue),
-                                           ),
-                                           icon: _isLoadingRoute
-                                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                              : const Icon(Icons.directions, size: 18),
-                                           label: Text(_routePoints.isEmpty ? "Show Route on Map" : "Refresh Route"),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // CONTROLS SECTION
-          Expanded(
-            child: todayAsync.when(
-              data: (status) {
-                final buttonColor = _getButtonColor(loginMethod, status.isClockedIn);
-                final buttonText = status.isClockedIn ? 'Clock Out' : 'Clock In';
-                final buttonIcon = status.isClockedIn ? Icons.logout : Icons.login;
-
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(Responsive.horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ATTENDANCE CARD
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Responsive.cardRadius)),
-                        child: Padding(
-                          padding: EdgeInsets.all(Responsive.value(mobile: 16.0, tablet: 24.0)),
-                          child: Column(
-                            children: [
-                               Text(
-                                  workMode == 'ON_DUTY' ? "On Duty Attendance" :
-                                  workMode == 'REMOTE' ? "Remote Attendance" : "Office Attendance",
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
-                               ),
-
-                               // Login method indicator
-                               Padding(
-                                 padding: EdgeInsets.only(top: Responsive.value(mobile: 8.0, tablet: 12.0)),
-                                 child: Row(
-                                   mainAxisAlignment: MainAxisAlignment.center,
-                                   children: [
-                                     Container(
-                                       padding: EdgeInsets.symmetric(
-                                         horizontal: Responsive.value(mobile: 12.0, tablet: 16.0),
-                                         vertical: Responsive.value(mobile: 4.0, tablet: 6.0),
-                                       ),
-                                       decoration: BoxDecoration(
-                                         color: _getButtonColor(loginMethod, false).withOpacity(0.1),
-                                         borderRadius: BorderRadius.circular(20),
-                                         border: Border.all(
-                                           color: _getButtonColor(loginMethod, false).withOpacity(0.3),
-                                         ),
-                                       ),
-                                       child: Row(
-                                         mainAxisSize: MainAxisSize.min,
-                                         children: [
-                                           Icon(
-                                             _getLoginMethodIcon(loginMethod),
-                                             size: Responsive.sp(14),
-                                             color: _getButtonColor(loginMethod, false),
-                                           ),
-                                           SizedBox(width: Responsive.value(mobile: 6.0, tablet: 8.0)),
-                                           Text(
-                                             'Logged in via ${loginMethod.displayName}',
-                                             style: TextStyle(
-                                               fontSize: Responsive.sp(11),
-                                               color: _getButtonColor(loginMethod, false),
-                                               fontWeight: FontWeight.w500,
-                                             ),
-                                           ),
-                                         ],
-                                       ),
-                                     ),
-                                   ],
-                                 ),
-                               ),
-
-                               if (workMode == 'ON_DUTY' || workMode != 'OFFICE' && workMode != 'REMOTE')
-                                  Padding(
-                                    padding: EdgeInsets.only(top: Responsive.value(mobile: 8.0, tablet: 12.0)),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.info_outline, size: Responsive.sp(16), color: Colors.blue),
-                                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
-                                        Text(
-                                          "GPS location & face verification required",
-                                          style: TextStyle(color: Colors.grey[700], fontSize: Responsive.sp(12)),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                               SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
-
-                               // SINGLE CLOCK IN/OUT BUTTON
-                               SizedBox(
-                                 width: double.infinity,
-                                 height: Responsive.value(mobile: 56.0, tablet: 64.0),
-                                 child: ElevatedButton.icon(
-                                   onPressed: _isPunching ||
-                                       (workModeNotifier.requiresGeofence && !_isInsideGeofence)
-                                       ? null
-                                       : () => _handlePunchToggle(status.isClockedIn),
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: buttonColor,
-                                     foregroundColor: Colors.white,
-                                     disabledBackgroundColor: Colors.grey[300],
-                                     disabledForegroundColor: Colors.grey[500],
-                                     shape: RoundedRectangleBorder(
-                                       borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                                     ),
-                                     elevation: 4,
-                                   ),
-                                   icon: _isPunching
-                                       ? SizedBox(
-                                           width: Responsive.sp(24),
-                                           height: Responsive.sp(24),
-                                           child: const CircularProgressIndicator(
-                                             strokeWidth: 2,
-                                             valueColor: AlwaysStoppedAnimation(Colors.white),
-                                           ),
-                                         )
-                                       : Icon(buttonIcon, size: Responsive.sp(28)),
-                                   label: Text(
-                                     _isPunching ? 'Processing...' : buttonText,
-                                     style: TextStyle(
-                                       fontSize: Responsive.sp(18),
-                                       fontWeight: FontWeight.bold,
-                                     ),
-                                   ),
-                                 ),
-                               ),
-
-                               if (workModeNotifier.requiresGeofence && !_isInsideGeofence)
-                                 Padding(
-                                   padding: EdgeInsets.only(top: Responsive.value(mobile: 12.0, tablet: 16.0)),
-                                   child: Text(
-                                     "Move closer to office to mark attendance.",
-                                     style: TextStyle(color: Colors.grey[600], fontSize: Responsive.sp(12)),
-                                   ),
-                                 ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
 
                       SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
 
-                      // Logic Note
-                      Container(
-                        padding: EdgeInsets.all(Responsive.value(mobile: 12.0, tablet: 16.0)),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(Responsive.cardRadius * 0.5),
-                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, size: Responsive.sp(18), color: Colors.blue),
-                            SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
-                            Expanded(
-                              child: Text(
-                                "Face verification required for clock in. Location captured for field work.",
-                                style: TextStyle(fontSize: Responsive.sp(12), color: Colors.blue),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
-
-                      // Stats Row
+                      // Stats Row with glass cards
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                           _buildStat("Clock In", status.clockInTime?.timeOnly ?? '--:--'),
-                           _buildStat("Clock Out", status.clockOutTime?.timeOnly ?? '--:--'),
-                           _buildStat("Total Hrs", status.totalHours),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Clock In',
+                              status.clockInTime?.timeOnly ?? '--:--',
+                              Icons.login,
+                              AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Clock Out',
+                              status.clockOutTime?.timeOnly ?? '--:--',
+                              Icons.logout,
+                              AppColors.error,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Total Hrs',
+                              status.totalHours,
+                              Icons.access_time_filled,
+                              AppColors.primary,
+                            ),
+                          ),
                         ],
-                      )
+                      ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
+
+                      SizedBox(height: Responsive.value(mobile: 24.0, tablet: 32.0)),
+
+                      // Attendance History
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent History',
+                            style: GoogleFonts.poppins(
+                              fontSize: Responsive.sp(18),
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.grey900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
+
+                      // Mock attendance history
+                      ..._buildAttendanceHistory(),
+
+                      // Bottom padding for nav bar
+                      SizedBox(height: Responsive.value(mobile: 80.0, tablet: 100.0)),
                     ],
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text("Error: $e")),
+              loading: () => SizedBox(
+                height: 300,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => SizedBox(
+                height: 300,
+                child: Center(child: Text("Error: $e")),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapActionButton({
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+    required String tooltip,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
@@ -816,21 +842,122 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
-  Widget _buildStat(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: Responsive.sp(16),
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return GlassCard(
+      blur: 10,
+      opacity: 0.15,
+      borderRadius: Responsive.cardRadius,
+      padding: EdgeInsets.all(Responsive.value(mobile: 12.0, tablet: 16.0)),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: Responsive.sp(20)),
+          SizedBox(height: Responsive.value(mobile: 8.0, tablet: 10.0)),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: Responsive.sp(16),
+              color: AppColors.grey900,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: AppColors.grey500,
+              fontSize: Responsive.sp(11),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildAttendanceHistory() {
+    final mockHistory = [
+      {'date': 'Today', 'in': '09:15 AM', 'out': '--:--', 'hours': '0h 0m', 'status': 'Active'},
+      {'date': 'Yesterday', 'in': '09:02 AM', 'out': '06:30 PM', 'hours': '9h 28m', 'status': 'Present'},
+      {'date': '14 Feb', 'in': '08:55 AM', 'out': '06:15 PM', 'hours': '9h 20m', 'status': 'Present'},
+      {'date': '13 Feb', 'in': '--:--', 'out': '--:--', 'hours': '0h 0m', 'status': 'Leave'},
+      {'date': '12 Feb', 'in': '09:30 AM', 'out': '07:00 PM', 'hours': '9h 30m', 'status': 'Present'},
+    ];
+
+    return mockHistory.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final isLeave = item['status'] == 'Leave';
+      final isActive = item['status'] == 'Active';
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: GlassCard(
+          blur: 10,
+          opacity: 0.12,
+          borderRadius: Responsive.cardRadius,
+          padding: EdgeInsets.all(Responsive.value(mobile: 14.0, tablet: 18.0)),
+          child: Row(
+            children: [
+              Container(
+                width: Responsive.value(mobile: 50.0, tablet: 60.0),
+                child: Text(
+                  item['date']!,
+                  style: GoogleFonts.poppins(
+                    fontSize: Responsive.sp(12),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.grey700,
+                  ),
+                ),
+              ),
+              SizedBox(width: Responsive.value(mobile: 12.0, tablet: 16.0)),
+              Expanded(
+                child: Row(
+                  children: [
+                    _buildTimeChip(item['in']!, Icons.login, AppColors.success),
+                    const SizedBox(width: 8),
+                    _buildTimeChip(item['out']!, Icons.logout, AppColors.error),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isLeave
+                      ? AppColors.warning.withOpacity(0.1)
+                      : isActive
+                          ? AppColors.success.withOpacity(0.1)
+                          : AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isLeave ? 'Leave' : isActive ? item['hours']! : item['hours']!,
+                  style: GoogleFonts.poppins(
+                    fontSize: Responsive.sp(11),
+                    fontWeight: FontWeight.w600,
+                    color: isLeave
+                        ? AppColors.warning
+                        : isActive
+                            ? AppColors.success
+                            : AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+      ).animate().fadeIn(delay: (600 + index * 80).ms).slideX(begin: 0.1);
+    }).toList();
+  }
+
+  Widget _buildTimeChip(String time, IconData icon, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
         Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: Responsive.sp(12),
+          time,
+          style: GoogleFonts.poppins(
+            fontSize: Responsive.sp(11),
+            color: AppColors.grey600,
           ),
         ),
       ],

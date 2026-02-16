@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../providers/finance_provider.dart';
 
 class FinanceScreen extends ConsumerWidget {
@@ -162,13 +163,11 @@ class FinanceScreen extends ConsumerWidget {
                 ),
               ).animate().fadeIn(delay: 100.ms),
               SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
-              Container(
+              GlassCard(
+                blur: 12,
+                opacity: 0.15,
+                borderRadius: Responsive.cardRadius,
                 padding: EdgeInsets.all(Responsive.horizontalPadding),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                  border: Border.all(color: AppColors.grey200),
-                ),
                 child: Column(
                   children: [
                     // Period Dropdown
@@ -317,15 +316,14 @@ class FinanceScreen extends ConsumerWidget {
 
   Widget _buildPayslipCard(
       BuildContext context, PayslipModel payslip, NumberFormat formatter) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(Responsive.horizontalPadding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Responsive.cardRadius),
-        border: Border.all(color: AppColors.grey200),
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        blur: 10,
+        opacity: 0.15,
+        borderRadius: Responsive.cardRadius,
+        padding: EdgeInsets.all(Responsive.horizontalPadding),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
@@ -383,6 +381,7 @@ class FinanceScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

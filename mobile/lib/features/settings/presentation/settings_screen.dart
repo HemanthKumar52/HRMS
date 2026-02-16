@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/responsive.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../shared/providers/theme_provider.dart';
 import '../../../shared/providers/work_mode_provider.dart';
 
@@ -35,12 +36,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                border: Border.all(color: AppColors.grey200),
-              ),
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: Responsive.cardRadius,
+              padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   // Dark Mode Toggle
@@ -179,14 +179,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: 200.ms),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
-            Container(
-              width: double.infinity,
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: Responsive.cardRadius,
               padding: EdgeInsets.all(Responsive.horizontalPadding),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                border: Border.all(color: AppColors.grey200),
-              ),
               child: Column(
                 children: [
                   _buildInfoRow('App Version', '1.0.0'),
