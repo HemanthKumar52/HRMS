@@ -68,6 +68,10 @@ export class LeaveService {
         isHalfDay: dto.isHalfDay || false,
         halfDayType: dto.halfDayType,
         reason: dto.reason,
+        compensatoryDate: dto.compensatoryDate
+          ? new Date(dto.compensatoryDate)
+          : null,
+        permissionHours: dto.permissionHours || null,
       },
     });
 

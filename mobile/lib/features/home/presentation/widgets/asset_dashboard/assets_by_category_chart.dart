@@ -41,6 +41,8 @@ class AssetsByCategoryChart extends StatelessWidget {
                          PieChartSectionData(color: const Color(0xFFE76F51), value: 10, radius: 60, showTitle: false), // Chairs
                        ],
                      ),
+                     swapAnimationDuration: const Duration(milliseconds: 800),
+                     swapAnimationCurve: Curves.easeInOutCubic,
                    ),
                  ),
                  const SizedBox(width: 24),

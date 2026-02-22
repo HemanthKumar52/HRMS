@@ -62,6 +62,8 @@ class RecruitmentOverviewCard extends StatelessWidget {
                          );
                       }) + [PieChartSectionData(value: 120, color: Colors.transparent, radius: 10, showTitle: false)], // Bottom half transparency
                     ),
+                    swapAnimationDuration: const Duration(milliseconds: 800),
+                    swapAnimationCurve: Curves.easeInOutCubic,
                   ),
                   Center(
                     child: Column(

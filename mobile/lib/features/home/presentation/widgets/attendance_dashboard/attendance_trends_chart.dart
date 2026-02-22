@@ -38,7 +38,7 @@ class AttendanceTrendsChart extends StatelessWidget {
                        x: index,
                        barRods: [
                          BarChartRodData(
-                            toY: isHigh ? 80 : 40 + (index * 2), 
+                            toY: isHigh ? 80 : 40 + (index * 2),
                             color: isHigh ? Colors.deepOrange : const Color(0xFFFFCCBC), // Highlight vs Normal
                             width: 12,
                             borderRadius: BorderRadius.circular(2),
@@ -59,6 +59,8 @@ class AttendanceTrendsChart extends StatelessWidget {
                   gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 20, getDrawingHorizontalLine: (v) => FlLine(color: AppColors.grey200, strokeWidth: 1)),
                   borderData: FlBorderData(show: false),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOutCubic,
               ),
             ),
           ],

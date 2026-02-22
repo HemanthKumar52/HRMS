@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/attendance_dashboard/employee_attendance_dashboard.dart';
 import 'widgets/dashboard_drawer.dart';
 
@@ -10,16 +13,11 @@ class AttendanceDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'Attendance Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'Attendance Dashboard',
         actions: [
           FilledButton.icon(
              onPressed: () {},
@@ -41,33 +39,33 @@ class AttendanceDashboardScreen extends StatelessWidget {
              const SizedBox(height: 16),
             
             // AI Assistant
-             Card(
-               color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                        child: const Icon(Icons.auto_awesome, color: Colors.white),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('AI Assistant', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                            Text('Always here to help', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
-                          ],
-                        ),
-                      ),
-                       const Chip(label: Text('Online', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.green, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
-                    ],
-                  ),
-                ),
+             GlassCard(
+               blur: 12,
+               opacity: 0.15,
+               borderRadius: 16,
+               padding: const EdgeInsets.all(16),
+               child: Row(
+                 children: [
+                   Container(
+                     padding: const EdgeInsets.all(10),
+                     decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                     child: const Icon(Icons.auto_awesome, color: Colors.white),
+                   ),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text('AI Assistant', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                         Text('Always here to help', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
+                       ],
+                     ),
+                   ),
+                    const Chip(label: Text('Online', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.green, padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                 ],
+               ),
              ).animate().fadeIn(delay: 600.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
 import '../data/leave_model.dart';
@@ -79,20 +80,11 @@ class LeaveTrackScreen extends ConsumerWidget {
   }
 
   Widget _buildLeaveSummaryCard(BuildContext context, LeaveModel leave) {
-    return Container(
-      width: double.infinity,
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: Responsive.cardRadius,
       padding: EdgeInsets.all(Responsive.horizontalPadding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Responsive.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -374,6 +366,8 @@ class LeaveTrackScreen extends ConsumerWidget {
         return 'On Duty (OD)';
       case LeaveType.compensatory:
         return 'Compensatory';
+      case LeaveType.permission:
+        return 'Permission';
     }
   }
 
@@ -393,6 +387,8 @@ class LeaveTrackScreen extends ConsumerWidget {
         return Colors.purpleAccent;
       case LeaveType.compensatory:
         return AppColors.secondary;
+      case LeaveType.permission:
+        return Colors.teal;
     }
   }
 

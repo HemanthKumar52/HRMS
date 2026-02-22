@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../../core/theme/app_theme_extensions.dart';
 
 class EmployeeStatusCard extends StatelessWidget {
   const EmployeeStatusCard({super.key});
@@ -11,7 +11,7 @@ class EmployeeStatusCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.grey200),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -26,14 +26,14 @@ class EmployeeStatusCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 TextButton(
                   onPressed: () {},
                   child: Text(
                     'View All',
-                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+                    style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
                   ),
                 ),
               ],
@@ -80,9 +80,9 @@ class EmployeeStatusCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildLegendItem('1054', 'Full-Time', const Color(0xFFFF8A65)),
-                _buildLegendItem('568', 'Contract', const Color(0xFF455A64)),
-                _buildLegendItem('80', 'Probation', const Color(0xFF9E9E9E)), // Used Grey for Probation based on mockup hint
+                _buildLegendItem(context, '1054', 'Full-Time', const Color(0xFFFF8A65)),
+                _buildLegendItem(context, '568', 'Contract', const Color(0xFF455A64)),
+                _buildLegendItem(context, '80', 'Probation', const Color(0xFF9E9E9E)), // Used Grey for Probation based on mockup hint
               ],
             ),
           ],
@@ -91,7 +91,7 @@ class EmployeeStatusCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(String count, String label, Color color) {
+  Widget _buildLegendItem(BuildContext context, String count, String label, Color color) {
     return Column(
       children: [
         Text(
@@ -99,7 +99,7 @@ class EmployeeStatusCard extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.grey900,
+            color: context.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
@@ -116,7 +116,7 @@ class EmployeeStatusCard extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 12,
-                color: AppColors.grey600,
+                color: context.textSecondary,
               ),
             ),
           ],

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../shared/providers/theme_provider.dart';
@@ -21,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return SafeScaffold(
       appBar: AdaptiveAppBar(title: 'Settings'),
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: context.scaffoldBg,
       body: SingleChildScrollView(
         padding: EdgeInsets.all(Responsive.horizontalPadding),
         child: Column(
@@ -32,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
               style: GoogleFonts.poppins(
                 fontSize: Responsive.sp(18),
                 fontWeight: FontWeight.w600,
-                color: AppColors.grey900,
+                color: context.textPrimary,
               ),
             ).animate().fadeIn(),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
@@ -175,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
               style: GoogleFonts.poppins(
                 fontSize: Responsive.sp(18),
                 fontWeight: FontWeight.w600,
-                color: AppColors.grey900,
+                color: context.textPrimary,
               ),
             ).animate().fadeIn(delay: 200.ms),
             SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
@@ -192,6 +193,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -295,7 +297,7 @@ class SettingsScreen extends ConsumerWidget {
                 style: GoogleFonts.poppins(
                   fontSize: Responsive.sp(20),
                   fontWeight: FontWeight.bold,
-                  color: AppColors.grey900,
+                  color: context.textPrimary,
                 ),
               ),
               SizedBox(height: Responsive.value(mobile: 16.0, tablet: 20.0)),

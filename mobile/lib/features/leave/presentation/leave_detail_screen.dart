@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import '../../../core/utils/extensions.dart';
 import '../data/leave_model.dart';
 import '../providers/leave_provider.dart';
@@ -18,9 +19,9 @@ class LeaveDetailScreen extends ConsumerWidget {
       leaveHistoryProvider(const LeaveHistoryParams()),
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Leave Details'),
+    return SafeScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Leave Details',
       ),
       body: historyAsync.when(
         data: (leaves) {
@@ -149,6 +150,7 @@ class LeaveDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
+          const SizedBox(height: 80),
         ],
       ),
     );

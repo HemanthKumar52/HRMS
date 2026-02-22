@@ -47,4 +47,24 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   bool get isDarkMode => state == ThemeMode.dark;
+
+  /// For CupertinoPicker: index 0=Light, 1=Dark, 2=System
+  Future<void> setThemeModeByIndex(int index) async {
+    const modes = [ThemeMode.light, ThemeMode.dark, ThemeMode.system];
+    if (index >= 0 && index < modes.length) {
+      await setThemeMode(modes[index]);
+    }
+  }
+
+  /// Returns the current index for CupertinoPicker
+  int get currentIndex {
+    switch (state) {
+      case ThemeMode.light:
+        return 0;
+      case ThemeMode.dark:
+        return 1;
+      case ThemeMode.system:
+        return 2;
+    }
+  }
 }

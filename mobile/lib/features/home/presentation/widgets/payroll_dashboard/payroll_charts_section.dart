@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class PayrollChartsSection extends StatelessWidget {
   const PayrollChartsSection({super.key});
@@ -27,15 +28,14 @@ class PayrollChartsSection extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         // Chart
-        Container(
+        SizedBox(
           height: 300,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.grey200),
-          ),
-          child: Column(
+          child: GlassCard(
+            blur: 12,
+            opacity: 0.15,
+            borderRadius: 16,
+            padding: const EdgeInsets.all(20),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Salary Range Distribution', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
@@ -65,10 +65,13 @@ class PayrollChartsSection extends StatelessWidget {
                     ),
                     borderData: FlBorderData(show: false),
                   ),
+                  swapAnimationDuration: const Duration(milliseconds: 800),
+                  swapAnimationCurve: Curves.easeInOutCubic,
                 ),
               ),
             ],
           ),
+        ),
         ),
       ],
     );
@@ -89,13 +92,11 @@ class PayrollChartsSection extends StatelessWidget {
   }
 
   Widget _buildStatItem(String label, String value, Color color, IconData icon) {
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,

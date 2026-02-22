@@ -61,6 +61,7 @@ export class AttendanceService {
         longitude: dto.longitude,
         address: dto.address,
         deviceId: dto.deviceId,
+        workMode: dto.workMode,
         isOffline: dto.isOffline || false,
         timestamp: punchTime,
         syncedAt: dto.isOffline ? new Date() : null,

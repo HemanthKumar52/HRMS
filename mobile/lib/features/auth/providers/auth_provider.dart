@@ -4,15 +4,16 @@ import '../../../shared/models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_client.dart'; // Import secureStorageProvider
 
+import '../../../core/constants/api_constants.dart';
+
 import 'package:dio/dio.dart';
 import 'dart:io';
 
 class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   final FlutterSecureStorage _storage;
   
-  static final String _baseUrl = Platform.isAndroid 
-      ? 'http://10.0.2.2:3000/api/v1' 
-      : 'http://localhost:3000/api/v1';
+  static final String _baseUrl = ApiConstants.baseUrl;
+
 
   final Dio _dio = Dio(BaseOptions(
     baseUrl: _baseUrl,

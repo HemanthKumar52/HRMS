@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/payroll_dashboard/payroll_overview_header.dart';
 import 'widgets/payroll_dashboard/payroll_charts_section.dart';
 import 'widgets/dashboard_drawer.dart';
@@ -12,19 +15,11 @@ class PayrollDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'Payroll Dashboard',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: AppColors.grey900,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'Payroll Dashboard',
         actions: [
           FilledButton.icon(
             onPressed: () {},
@@ -47,13 +42,11 @@ class PayrollDashboardScreen extends StatelessWidget {
              const PayrollChartsSection().animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
              const SizedBox(height: 16),
              // Placeholder for Pipeline/Steps
-             Container(
+             GlassCard(
+               blur: 12,
+               opacity: 0.15,
+               borderRadius: 16,
                padding: const EdgeInsets.all(16),
-               decoration: BoxDecoration(
-                 color: Colors.white,
-                 borderRadius: BorderRadius.circular(12),
-                 border: Border.all(color: AppColors.grey200),
-               ),
                child: Column(
                  crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
@@ -75,13 +68,11 @@ class PayrollDashboardScreen extends StatelessWidget {
              const SizedBox(height: 16),
              
              // Recent Payslips
-             Container(
+             GlassCard(
+               blur: 12,
+               opacity: 0.15,
+               borderRadius: 16,
                padding: const EdgeInsets.all(16),
-               decoration: BoxDecoration(
-                 color: Colors.white,
-                 borderRadius: BorderRadius.circular(12),
-                 border: Border.all(color: AppColors.grey200),
-               ),
                child: Column(
                  crossAxisAlignment: CrossAxisAlignment.start,
                  children: [
@@ -130,6 +121,7 @@ class PayrollDashboardScreen extends StatelessWidget {
                   ),
                 ),
              ).animate().fadeIn(delay: 600.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),

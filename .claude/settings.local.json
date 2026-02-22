@@ -15,7 +15,14 @@
       "Bash(npx prisma generate:*)",
       "Bash(npx prisma db push:*)",
       "Bash(curl:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(npm install:*)",
+      "Bash(dart analyze:*)",
+      "Bash(dir:*)",
+      "Bash(xargs:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(dart run:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

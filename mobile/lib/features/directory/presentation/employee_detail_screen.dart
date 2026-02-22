@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import '../../../shared/models/user_model.dart';
 import '../providers/directory_provider.dart';
 
@@ -16,9 +17,9 @@ class EmployeeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider(employeeId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Employee Details'),
+    return SafeScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Employee Details',
       ),
       body: userAsync.when(
         data: (user) => _buildContent(context, user),

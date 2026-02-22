@@ -1,0 +1,62 @@
+[
+  {
+    "timestamp": 1769077935766,
+    "ear": 0.226,
+    "leftEAR": 0.225,
+    "rightEAR": 0.227
+  },
+  {
+    "timestamp": 1769077935802,
+    "ear": 0.231,
+    "leftEAR": 0.226,
+    "rightEAR": 0.237
+  },
+  {
+    "timestamp": 1769077935835,
+    "ear": 0.21,
+    "leftEAR": 0.204,
+    "rightEAR": 0.216
+  },
+  {
+    "timestamp": 1769077935872,
+    "ear": 0.247,
+    "leftEAR": 0.234,
+    "rightEAR": 0.259
+  },
+  {
+    "timestamp": 1769077935908,
+    "ear": 0.297,
+    "leftEAR": 0.266,
+    "rightEAR": 0.327
+  },
+  {
+    "timestamp": 1769077935944,
+    "ear": 0.336,
+    "leftEAR": 0.282,
+    "rightEAR": 0.389
+  },
+  {
+    "timestamp": 1769077935980,
+    "ear": 0.319,
+    "leftEAR": 0.246,
+    "rightEAR": 0.392
+  },
+  {
+    "timestamp": 1769077936017,
+    "ear": 0.29,
+    "leftEAR": 0.208,
+    "rightEAR": 0.372
+  },
+  {
+    "timestamp": 1769077936052,
+    "ear": 0.363,
+    "leftEAR": 0.209,
+    "rightEAR": 0.517
+  },
+  {
+    "timestamp": 1769077936089,
+    "ear": 0.719,
+    "leftEAR": 0.23,
+    "rightEAR": 1.208
+  }
+]

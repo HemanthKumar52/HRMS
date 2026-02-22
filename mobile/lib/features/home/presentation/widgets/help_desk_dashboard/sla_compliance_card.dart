@@ -37,6 +37,8 @@ class SlaComplianceCard extends StatelessWidget {
                         PieChartSectionData(color: AppColors.grey200, value: 19.5, showTitle: false, radius: 10),
                       ],
                     ),
+                    swapAnimationDuration: const Duration(milliseconds: 800),
+                    swapAnimationCurve: Curves.easeInOutCubic,
                   ),
                   const Center(
                     child: Text('80.5%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

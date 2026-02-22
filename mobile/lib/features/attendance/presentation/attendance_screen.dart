@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,18 +9,24 @@ import 'package:geocoding/geocoding.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../core/widgets/check_in_type_dialog.dart';
 import '../../../core/widgets/face_verification_dialog.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/dynamic_island_notification.dart';
 import '../../../shared/providers/work_mode_provider.dart';
 import '../../../shared/providers/login_method_provider.dart';
+import '../../../shared/providers/clock_in_method_provider.dart';
+import '../../../shared/providers/face_photo_provider.dart';
 import '../data/attendance_model.dart';
+import '../data/face_upload_service.dart';
 import '../providers/attendance_provider.dart';
 
 class AttendanceScreen extends ConsumerStatefulWidget {
@@ -41,14 +48,35 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _isSimulated = false;
   bool _isMapReady = false;
   CheckInType? _selectedCheckInType;
-  String? _facePhotoPath;
+  ClockInMethod? _pendingClockInMethod;
+
+  // Real-time clock
+  DateTime _currentDateTime = DateTime.now();
+  Timer? _clockTimer;
+
+  // GPS location address
+  String _currentAddress = 'Fetching location...';
 
   @override
   void initState() {
     super.initState();
+    // Start real-time clock that ticks every second
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _currentDateTime = DateTime.now();
+        });
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startLocationUpdates();
     });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
   }
 
   /// Get button color based on login method
@@ -113,6 +141,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             _checkGeofence();
          });
 
+         // Reverse geocode to get user's actual address
+         _reverseGeocodeLocation(pos.latitude, pos.longitude);
+
          if (_isMapReady) {
            try {
              _mapController.move(_currentLocation!, 16);
@@ -125,7 +156,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          distanceFilter: 5,
+          distanceFilter: 10,
         )
       ).listen((Position position) {
         if (_isSimulated) return;
@@ -134,6 +165,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             _currentLocation = LatLng(position.latitude, position.longitude);
             _checkGeofence();
           });
+          _reverseGeocodeLocation(position.latitude, position.longitude);
         }
       });
     } catch (e) {
@@ -180,13 +212,55 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
 
+  /// Reverse geocode GPS coordinates to get a human-readable address
+  Future<void> _reverseGeocodeLocation(double lat, double lng) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty && mounted) {
+        final place = placemarks.first;
+        final parts = <String>[];
+        if (place.street != null && place.street!.isNotEmpty) parts.add(place.street!);
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) parts.add(place.subLocality!);
+        if (place.locality != null && place.locality!.isNotEmpty) parts.add(place.locality!);
+        setState(() {
+          _currentAddress = parts.isNotEmpty
+              ? parts.join(', ')
+              : 'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
+        });
+      }
+    }
+  }
+
   void _checkGeofence() {
     if (_currentLocation == null) return;
     final distance = const Distance().as(LengthUnit.Meter, _currentLocation!, _officeLocation);
+    final wasInside = _isInsideGeofence;
     setState(() {
       _distanceToOffice = distance;
-      _isInsideGeofence = distance <= 200;
+      _isInsideGeofence = distance <= 20;
     });
+
+    // Show DynamicIsland alert when user leaves the geofence zone
+    if (wasInside && !_isInsideGeofence && mounted) {
+      DynamicIslandManager().show(
+        context,
+        message: 'You are ${distance.toStringAsFixed(0)}m from office',
+        isError: true,
+      );
+    }
+    // Show DynamicIsland when user enters the geofence zone
+    if (!wasInside && _isInsideGeofence && mounted) {
+      DynamicIslandManager().show(
+        context,
+        message: 'You are within office range',
+      );
+    }
   }
 
   void _simulateLocation() {
@@ -302,10 +376,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
         return;
       }
-      _facePhotoPath = photoPath;
+      // Store face photo path in provider for avatar display
+      ref.read(facePhotoProvider.notifier).state = photoPath;
+      // Upload face photo to backend (non-blocking)
+      ref.read(faceUploadServiceProvider).uploadFacePhoto(photoPath);
     }
 
-    // Location capture for ON_DUTY and FIELD modes
+    // Location capture for ON_DUTY and FIELD modes (both clock-in AND clock-out)
     if (workMode == 'ON_DUTY' || _selectedCheckInType != null) {
       try {
         // Check if location service is enabled
@@ -369,18 +446,39 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     }
 
-    // Biometric check for OFFICE mode
+    // Method-locked attendance for OFFICE mode
     if (workModeNotifier.requiresBiometric) {
-      final bioService = ref.read(biometricServiceProvider);
-      final authenticated = await bioService.authenticate(reason: 'Authenticate to mark attendance');
+      final clockInMethod = ref.read(clockInMethodProvider);
 
-      if (!authenticated) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Authentication Required'), backgroundColor: AppColors.error),
-          );
+      if (isClockedIn) {
+        // Clock OUT: enforce same method used for clock in
+        if (clockInMethod == ClockInMethod.biometric) {
+          final bioService = ref.read(biometricServiceProvider);
+          final authenticated = await bioService.authenticate(
+              reason: 'Authenticate with biometric to clock out');
+          if (!authenticated) {
+            if (mounted) {
+              DynamicIslandManager().show(context,
+                  message: 'You must clock out using biometric',
+                  isError: true);
+            }
+            return;
+          }
         }
-        return;
+        // If clockInMethod was 'app', allow normal app-based clock out
+      } else {
+        // Clock IN: try biometric first, fallback to app
+        final bioService = ref.read(biometricServiceProvider);
+        final authenticated = await bioService.authenticate(
+            reason: 'Authenticate to mark attendance');
+
+        if (authenticated) {
+          // Will save method after successful punch
+          _pendingClockInMethod = ClockInMethod.biometric;
+        } else {
+          // Biometric failed/cancelled, proceed with app-based clock in
+          _pendingClockInMethod = ClockInMethod.app;
+        }
       }
     }
 
@@ -403,6 +501,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       ref.invalidate(todayStatusProvider);
       ref.invalidate(attendanceSummaryProvider);
 
+      // Save or clear clock-in method for method-locked attendance
+      if (punchType == PunchType.clockIn && _pendingClockInMethod != null) {
+        await ref
+            .read(clockInMethodProvider.notifier)
+            .setMethod(_pendingClockInMethod!);
+        _pendingClockInMethod = null;
+      } else if (punchType == PunchType.clockOut) {
+        await ref.read(clockInMethodProvider.notifier).clear();
+        // Clear face photo — avatar reverts to initials
+        ref.read(facePhotoProvider.notifier).state = null;
+      }
+
       if (mounted) {
         String msg;
         if (_selectedCheckInType != null) {
@@ -414,6 +524,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
         if (result?.isOffline == true) msg += ' (Offline)';
 
+        DynamicIslandManager().show(context, message: msg);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
           backgroundColor: AppColors.success,
@@ -421,6 +532,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     } catch (e) {
       if (mounted) {
+        DynamicIslandManager().show(context, message: 'Failed to record attendance', isError: true);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to record punch'), backgroundColor: Colors.red));
       }
     } finally {
@@ -433,6 +545,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
+  String _computeElapsed(DateTime clockIn) {
+    final elapsed = _currentDateTime.difference(clockIn);
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes % 60;
+    final s = elapsed.inSeconds % 60;
+    return '${h}h ${m}m ${s}s';
+  }
+
   @override
   Widget build(BuildContext context) {
     Responsive.init(context);
@@ -442,7 +562,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final workModeNotifier = ref.read(workModeProvider.notifier);
     final loginMethod = ref.watch(loginMethodProvider);
 
-    final showMap = workMode != 'REMOTE';
+    final showMap = true; // Always show map for location verification
     final showGeofence = workModeNotifier.requiresGeofence;
 
     // Responsive map height
@@ -485,11 +605,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             circles: [
                               CircleMarker(
                                 point: _officeLocation,
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 borderColor: AppColors.primary,
                                 borderStrokeWidth: 2,
                                 useRadiusInMeter: true,
-                                radius: 200,
+                                radius: 20,
                               ),
                             ],
                           ),
@@ -553,7 +673,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 ),
               ),
 
-            // LOCATION VERIFIED BANNER
+            // REAL-TIME CLOCK + LOCATION BANNER
             if (showMap)
               Container(
                 width: double.infinity,
@@ -566,29 +686,61 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       ? (_isInsideGeofence ? const Color(0xFF1B5E20) : Colors.orange.shade800)
                       : Colors.blue.shade700,
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Icon(
-                      showGeofence
-                          ? (_isInsideGeofence ? Icons.verified_user : Icons.location_off)
-                          : Icons.location_on,
-                      color: Colors.white,
-                      size: Responsive.sp(18),
-                    ),
-                    SizedBox(width: Responsive.value(mobile: 10.0, tablet: 14.0)),
-                    Expanded(
-                      child: Text(
-                        showGeofence
-                            ? (_isInsideGeofence
-                                ? 'Location Verified: Olympia Pinnacle'
-                                : 'Outside Office (${(_distanceToOffice / 1000).toStringAsFixed(1)} km away)')
-                            : 'Location: ${workMode ?? 'Field'} - GPS Active',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: Responsive.sp(13),
-                          fontWeight: FontWeight.w500,
+                    // Real-time date & time
+                    Row(
+                      children: [
+                        Icon(Icons.access_time_filled, color: Colors.white, size: Responsive.sp(16)),
+                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                        Text(
+                          DateFormat('hh:mm:ss a').format(_currentDateTime),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: Responsive.sp(14),
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('EEE, dd MMM yyyy').format(_currentDateTime),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: Responsive.sp(12),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: Responsive.value(mobile: 6.0, tablet: 8.0)),
+                    // GPS location address
+                    Row(
+                      children: [
+                        Icon(
+                          showGeofence
+                              ? (_isInsideGeofence ? Icons.verified_user : Icons.location_off)
+                              : Icons.location_on,
+                          color: Colors.white,
+                          size: Responsive.sp(16),
+                        ),
+                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
+                        Expanded(
+                          child: Text(
+                            showGeofence
+                                ? (_isInsideGeofence
+                                    ? 'Verified: $_currentAddress'
+                                    : 'Outside Office (${(_distanceToOffice / 1000).toStringAsFixed(1)} km) - $_currentAddress')
+                                : _currentAddress,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: Responsive.sp(11),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -614,13 +766,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         ),
                         child: Column(
                           children: [
-                            // Total hours - large display
+                            // Total hours - live display when clocked in
                             Text(
-                              status.totalHours,
+                              isClockedIn && status.clockInTime != null
+                                  ? _computeElapsed(status.clockInTime!)
+                                  : status.totalHours,
                               style: GoogleFonts.poppins(
                                 fontSize: Responsive.sp(48),
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.grey900,
+                                color: context.textPrimary,
                               ),
                             ).animate().fadeIn(delay: 300.ms),
                             const SizedBox(height: 4),
@@ -628,7 +782,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               isClockedIn ? 'Clocked In' : 'Not Clocked In',
                               style: GoogleFonts.poppins(
                                 fontSize: Responsive.sp(14),
-                                color: isClockedIn ? AppColors.success : AppColors.grey500,
+                                color: isClockedIn ? AppColors.success : context.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -654,7 +808,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (isClockedIn ? Colors.red : const Color(0xFF1B8A6B)).withOpacity(0.4),
+                                      color: (isClockedIn ? Colors.red : const Color(0xFF1B8A6B)).withValues(alpha: 0.4),
                                       blurRadius: 24,
                                       offset: const Offset(0, 8),
                                     ),
@@ -711,14 +865,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 Icon(
                                   _getLoginMethodIcon(loginMethod),
                                   size: Responsive.sp(16),
-                                  color: AppColors.grey500,
+                                  color: context.textSecondary,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Synced with ${loginMethod.displayName}',
                                   style: GoogleFonts.poppins(
                                     fontSize: Responsive.sp(12),
-                                    color: AppColors.grey500,
+                                    color: context.textSecondary,
                                   ),
                                 ),
                               ],
@@ -772,7 +926,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: Responsive.sp(18),
                               fontWeight: FontWeight.w600,
-                              color: AppColors.grey900,
+                              color: context.textPrimary,
                             ),
                           ),
                         ],
@@ -818,7 +972,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -857,13 +1011,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.bold,
               fontSize: Responsive.sp(16),
-              color: AppColors.grey900,
+              color: context.textPrimary,
             ),
           ),
           Text(
             label,
             style: GoogleFonts.poppins(
-              color: AppColors.grey500,
+              color: context.textSecondary,
               fontSize: Responsive.sp(11),
             ),
           ),
@@ -903,7 +1057,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: Responsive.sp(12),
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey700,
+                    color: context.textSecondary,
                   ),
                 ),
               ),
@@ -921,10 +1075,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: isLeave
-                      ? AppColors.warning.withOpacity(0.1)
+                      ? AppColors.warning.withValues(alpha: 0.1)
                       : isActive
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.primary.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -957,7 +1111,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           time,
           style: GoogleFonts.poppins(
             fontSize: Responsive.sp(11),
-            color: AppColors.grey600,
+            color: context.textSecondary,
           ),
         ),
       ],

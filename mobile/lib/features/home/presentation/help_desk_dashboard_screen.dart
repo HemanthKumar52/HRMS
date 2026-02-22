@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/help_desk_dashboard/help_desk_stats_cards.dart';
 import 'widgets/help_desk_dashboard/ticket_trends_chart.dart';
 import 'widgets/help_desk_dashboard/tickets_by_status_chart.dart';
@@ -17,16 +19,11 @@ class HelpDeskDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'Help Desk Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'Help Desk Dashboard',
         actions: [
           OutlinedButton.icon(
              onPressed: (){},
@@ -134,6 +131,7 @@ class HelpDeskDashboardScreen extends StatelessWidget {
                  );
                }
             }).animate().fadeIn(delay: 400.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),

@@ -42,7 +42,7 @@ class HrmsUsageTrendChart extends StatelessWidget {
                     lineBarsData: [
                       LineChartBarData(
                         spots: const [
-                          FlSpot(0, 1), FlSpot(1, 4), FlSpot(2, 4), FlSpot(3, 2), 
+                          FlSpot(0, 1), FlSpot(1, 4), FlSpot(2, 4), FlSpot(3, 2),
                           FlSpot(4, 5.5), FlSpot(5, 5.5), FlSpot(6, 6.5)
                         ],
                         isCurved: true,
@@ -59,7 +59,7 @@ class HrmsUsageTrendChart extends StatelessWidget {
                         ),
                       ),
                     ],
-                 )
+                 ),
                ),
              ),
           ],

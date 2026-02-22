@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class HrOverviewGrid extends StatelessWidget {
   const HrOverviewGrid({super.key});
@@ -94,13 +96,11 @@ class _StatCard extends StatelessWidget {
     final badgeColor = isNegative ? AppColors.error : AppColors.success;
     final badgeIcon = isNegative ? Icons.arrow_downward : Icons.arrow_upward;
 
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,7 +110,7 @@ class _StatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
@@ -123,7 +123,7 @@ class _StatCard extends StatelessWidget {
             label,
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: AppColors.grey600,
+              color: context.textSecondary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -141,14 +141,14 @@ class _StatCard extends StatelessWidget {
                      style: GoogleFonts.poppins(
                        fontSize: 24,
                        fontWeight: FontWeight.bold,
-                       color: AppColors.grey900,
+                       color: context.textPrimary,
                      ),
                    ),
                    Text(
                      subLabel,
                      style: GoogleFonts.poppins(
                        fontSize: 10,
-                       color: AppColors.grey500,
+                       color: context.textSecondary,
                      ),
                    ),
                  ],
@@ -156,7 +156,7 @@ class _StatCard extends StatelessWidget {
                Container(
                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                  decoration: BoxDecoration(
-                   color: badgeColor.withOpacity(0.1),
+                   color: badgeColor.withValues(alpha: 0.1),
                    borderRadius: BorderRadius.circular(12),
                  ),
                  child: Row(

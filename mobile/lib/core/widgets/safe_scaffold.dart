@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/responsive.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_theme_extensions.dart';
 
 /// A scaffold wrapper that properly handles safe areas for iOS and Android
 /// Includes proper handling for notches, status bars, and navigation bars
@@ -228,8 +229,8 @@ class AdaptiveAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: actions,
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,
-      backgroundColor: backgroundColor ?? Colors.white,
-      foregroundColor: foregroundColor ?? AppColors.grey900,
+      backgroundColor: backgroundColor ?? context.surfaceBg,
+      foregroundColor: foregroundColor ?? context.textPrimary,
       elevation: elevation ?? 0,
       centerTitle: centerTitle || Platform.isIOS,
       surfaceTintColor: Colors.transparent,
@@ -339,7 +340,7 @@ class ResponsiveCard extends StatelessWidget {
     Widget card = Container(
       margin: effectiveMargin,
       decoration: BoxDecoration(
-        color: color ?? Colors.white,
+        color: color ?? context.surfaceBg,
         borderRadius: effectiveBorderRadius,
         boxShadow: [
           BoxShadow(

@@ -75,7 +75,7 @@ class PurchaseTrendChart extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: [
-                        const FlSpot(0, 2), const FlSpot(1, 2.5), const FlSpot(2, 4), const FlSpot(3, 5), 
+                        const FlSpot(0, 2), const FlSpot(1, 2.5), const FlSpot(2, 4), const FlSpot(3, 5),
                         const FlSpot(4, 5.2), const FlSpot(5, 5), const FlSpot(6, 6), const FlSpot(7, 6.2),
                         const FlSpot(8, 6), const FlSpot(9, 6.1), const FlSpot(10, 6.8), const FlSpot(11, 7),
                       ],

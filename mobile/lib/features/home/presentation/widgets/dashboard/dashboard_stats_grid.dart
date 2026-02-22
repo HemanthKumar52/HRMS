@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class DashboardStatsGrid extends StatelessWidget {
   const DashboardStatsGrid({super.key});
@@ -17,6 +19,7 @@ class DashboardStatsGrid extends StatelessWidget {
       childAspectRatio: 1.5,
       children: [
         _buildStatCard(
+          context,
           icon: Icons.access_time_filled,
           iconColor: Colors.orange,
           value: '8.36 / 9',
@@ -25,14 +28,16 @@ class DashboardStatsGrid extends StatelessWidget {
           isPositive: true,
         ),
         _buildStatCard(
+          context,
           icon: Icons.calendar_view_week,
-          iconColor: Colors.black,
+          iconColor: context.isDark ? Colors.white : Colors.black,
           value: '10 / 40',
           label: 'Total Hours Week',
           subValue: '7% Last Week',
           isPositive: true,
         ),
         _buildStatCard(
+          context,
           icon: Icons.calendar_month,
           iconColor: Colors.blue,
           value: '75 / 98',
@@ -41,6 +46,7 @@ class DashboardStatsGrid extends StatelessWidget {
           isPositive: false,
         ),
         _buildStatCard(
+          context,
           icon: Icons.timer,
           iconColor: Colors.pink,
           value: '16 / 28',
@@ -52,7 +58,8 @@ class DashboardStatsGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildStatCard(
+    BuildContext context, {
     required IconData icon,
     required Color iconColor,
     required String value,
@@ -60,22 +67,19 @@ class DashboardStatsGrid extends StatelessWidget {
     required String subValue,
     required bool isPositive,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.grey200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(12),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, size: 20, color: iconColor),
@@ -88,14 +92,14 @@ class DashboardStatsGrid extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 Text(
                   label,
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    color: AppColors.grey500,
+                    color: context.textSecondary,
                   ),
                 ),
               ],
@@ -112,14 +116,13 @@ class DashboardStatsGrid extends StatelessWidget {
                   subValue,
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    color: AppColors.grey500,
+                    color: context.textTertiary,
                   ),
                 ),
               ],
             ),
           ],
         ),
-      ),
     );
   }
 }

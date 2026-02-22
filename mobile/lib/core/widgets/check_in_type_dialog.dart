@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'glass_card.dart';
 
 /// Type of check-in for mobile users
 enum CheckInType {
@@ -53,14 +54,15 @@ class CheckInTypeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
+      child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 340),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: GlassCard(
+          blur: 12,
+          opacity: 0.15,
+          borderRadius: 20,
+          padding: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
           children: [
             // Header
             Container(
@@ -130,6 +132,7 @@ class CheckInTypeDialog extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

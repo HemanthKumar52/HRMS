@@ -62,7 +62,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   int _getCurrentIndex(BuildContext context) {
     try {
       final location = GoRouterState.of(context).matchedLocation;
-      if (location.startsWith('/leave')) return 1;
+      if (location.startsWith('/requests')) return 1;
       if (location.startsWith('/attendance')) return 2;
       if (location.startsWith('/finance')) return 3;
       return 0;
@@ -77,7 +77,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         context.go('/');
         break;
       case 1:
-        context.go('/leave');
+        context.go('/requests');
         break;
       case 2:
         context.go('/attendance');
@@ -117,23 +117,23 @@ class _MainShellState extends ConsumerState<MainShell> {
         onTap: _onItemTapped,
         items: const [
           GlassNavItem(
-            icon: Icons.home_outlined,
-            activeIcon: Icons.home,
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
             label: 'Home',
           ),
           GlassNavItem(
-            icon: Icons.event_note_outlined,
-            activeIcon: Icons.event_note,
-            label: 'Leave',
+            icon: Icons.assignment_outlined,
+            activeIcon: Icons.assignment,
+            label: 'Requests',
           ),
           GlassNavItem(
-            icon: Icons.access_time_outlined,
-            activeIcon: Icons.access_time_filled,
+            icon: Icons.fingerprint,
+            activeIcon: Icons.fingerprint,
             label: 'Attendance',
           ),
           GlassNavItem(
-            icon: Icons.account_balance_wallet_outlined,
-            activeIcon: Icons.account_balance_wallet,
+            icon: Icons.payments_outlined,
+            activeIcon: Icons.payments,
             label: 'Finance',
           ),
         ],

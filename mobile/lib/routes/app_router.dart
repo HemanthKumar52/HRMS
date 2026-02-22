@@ -8,7 +8,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/main_shell.dart';
-import '../features/leave/presentation/leave_screen.dart';
+import '../features/requests/presentation/request_tracking_screen.dart';
 import '../features/leave/presentation/apply_leave_screen.dart';
 import '../features/leave/presentation/leave_detail_screen.dart';
 import '../features/leave/presentation/leave_track_screen.dart';
@@ -24,12 +24,14 @@ import '../features/home/presentation/manager_dashboard_screen.dart';
 import '../features/home/presentation/my_tasks_screen.dart';
 import '../features/home/presentation/create_claim_screen.dart';
 import '../features/home/presentation/create_ticket_screen.dart';
+import '../features/requests/presentation/create_shift_request_screen.dart';
 import '../features/home/presentation/approvals_screen.dart';
 import '../features/home/presentation/onboarding_tasks_screen.dart';
-import '../features/auth/presentation/work_mode_selection_screen.dart';
+import '../features/home/presentation/add_employee_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/finance/presentation/finance_screen.dart';
+import '../features/home/presentation/timesheet_screen.dart';
 import '../shared/providers/work_mode_provider.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -39,6 +41,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final workMode = ref.watch(workModeProvider);
 
+  // Auto-set default work mode if not set (skip work mode selection screen)
+  if (workMode == null) {
+    Future.microtask(() {
+      ref.read(workModeProvider.notifier).setWorkMode('OFFICE');
+    });
+  }
+
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
@@ -46,9 +55,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.asData?.value != null;
       final isLoggingIn = state.matchedLocation == '/login';
-      final isSelectingWorkMode = state.matchedLocation == '/work-mode';
       final isSplash = state.matchedLocation == '/splash';
-      final hasWorkMode = workMode != null;
 
       // Allow splash screen to show
       if (isSplash) {
@@ -60,13 +67,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      // Logged in but no work mode -> go to work mode selection
-      if (isLoggedIn && !hasWorkMode && !isSelectingWorkMode) {
-        return '/work-mode';
-      }
-
-      // Logged in with work mode but on login screen -> go home
-      if (isLoggedIn && hasWorkMode && isLoggingIn) {
+      // Logged in but on login screen -> go home
+      if (isLoggedIn && isLoggingIn) {
         return '/';
       }
 
@@ -83,11 +85,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: '/work-mode',
-        name: 'work-mode',
-        builder: (context, state) => const WorkModeSelectionScreen(),
-      ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => MainShell(child: child),
@@ -98,9 +95,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const HomeScreen(),
           ),
           GoRoute(
-            path: '/leave',
-            name: 'leave',
-            builder: (context, state) => const LeaveScreen(),
+            path: '/requests',
+            name: 'requests',
+            builder: (context, state) => const RequestTrackingScreen(),
             routes: [
               GoRoute(
                 path: 'apply',
@@ -222,6 +219,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'create-ticket',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CreateTicketScreen(),
+      ),
+      GoRoute(
+        path: '/create-shift-request',
+        name: 'create-shift-request',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CreateShiftRequestScreen(),
+      ),
+      GoRoute(
+        path: '/add-employee',
+        name: 'add-employee',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddEmployeeScreen(),
+      ),
+      GoRoute(
+        path: '/timesheet',
+        name: 'timesheet',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const TimesheetScreen(),
       ),
     ],
   );

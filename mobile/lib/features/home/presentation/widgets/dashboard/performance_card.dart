@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
 
 class PerformanceCard extends StatelessWidget {
   const PerformanceCard({super.key});
@@ -12,7 +13,7 @@ class PerformanceCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.grey200),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -27,22 +28,22 @@ class PerformanceCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.grey300),
+                    border: Border.all(color: context.borderColor),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 14, color: AppColors.grey600),
+                      Icon(Icons.calendar_today, size: 14, color: context.textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         '2025',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+                        style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
                       ),
                     ],
                   ),
@@ -57,14 +58,14 @@ class PerformanceCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -88,7 +89,7 @@ class PerformanceCard extends StatelessWidget {
                     horizontalInterval: 20,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: AppColors.grey200,
+                        color: context.borderColor,
                         strokeWidth: 1,
                       );
                     },
@@ -103,33 +104,33 @@ class PerformanceCard extends StatelessWidget {
                         reservedSize: 30,
                         interval: 1,
                         getTitlesWidget: (value, meta) {
-                          const style = TextStyle(
-                            color: Color(0xff68737d),
+                          final style = TextStyle(
+                            color: context.textSecondary,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           );
                           Widget text;
                           switch (value.toInt()) {
                             case 0:
-                              text = const Text('Jan', style: style);
+                              text = Text('Jan', style: style);
                               break;
                             case 2:
-                              text = const Text('Feb', style: style);
+                              text = Text('Feb', style: style);
                               break;
                             case 4:
-                              text = const Text('Mar', style: style);
+                              text = Text('Mar', style: style);
                               break;
                             case 6:
-                              text = const Text('Apr', style: style);
+                              text = Text('Apr', style: style);
                               break;
                             case 8:
-                              text = const Text('May', style: style);
+                              text = Text('May', style: style);
                               break;
                             case 10:
-                              text = const Text('Jun', style: style);
+                              text = Text('Jun', style: style);
                               break;
                             default:
-                              text = const Text('', style: style);
+                              text = Text('', style: style);
                               break;
                           }
                           return SideTitleWidget(
@@ -146,8 +147,8 @@ class PerformanceCard extends StatelessWidget {
                         getTitlesWidget: (value, meta) {
                           return Text(
                             '${value.toInt()}k',
-                            style: const TextStyle(
-                              color: Color(0xff67727d),
+                            style: TextStyle(
+                              color: context.textSecondary,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -183,8 +184,8 @@ class PerformanceCard extends StatelessWidget {
                         show: true,
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.success.withOpacity(0.3),
-                            AppColors.primary.withOpacity(0.0),
+                            AppColors.success.withValues(alpha: 0.3),
+                            AppColors.primary.withValues(alpha: 0.0),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,

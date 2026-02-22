@@ -1,15 +1,20 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
-class AttendanceTimerCard extends StatelessWidget {
+class AttendanceTimerCard extends StatefulWidget {
   final bool isClockedIn;
   final String? clockInTime;
   final String? clockOutTime;
   final String totalHours;
+  final DateTime? clockInDateTime;
   final VoidCallback onPunch;
 
   const AttendanceTimerCard({
@@ -18,50 +23,90 @@ class AttendanceTimerCard extends StatelessWidget {
     required this.clockInTime,
     required this.clockOutTime,
     required this.totalHours,
+    this.clockInDateTime,
     required this.onPunch,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Parse total hours to double for progress (assuming "HH:mm" or similar)
+  State<AttendanceTimerCard> createState() => _AttendanceTimerCardState();
+}
+
+class _AttendanceTimerCardState extends State<AttendanceTimerCard> {
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
+  }
+
+  String _computeLiveHours() {
+    if (!widget.isClockedIn || widget.clockInDateTime == null) {
+      return widget.totalHours;
+    }
+    final elapsed = _now.difference(widget.clockInDateTime!);
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes % 60;
+    return '${h}h ${m}m';
+  }
+
+  double _computeProgress() {
+    final display = _computeLiveHours();
     double progress = 0.0;
     try {
-      if (totalHours.contains('h')) {
-        // Format "Xh Ym"
-        final parts = totalHours.split(' ');
+      if (display.contains('h')) {
+        final parts = display.split(' ');
         final h = int.tryParse(parts[0].replaceAll('h', '')) ?? 0;
         final m = int.tryParse(parts[1].replaceAll('m', '')) ?? 0;
-        progress = (h + m / 60) / 9.0; // Assuming 9 hours work day
+        progress = (h + m / 60) / 9.0;
       }
     } catch (_) {}
-    
-    // Cap progress at 1.0
-    progress = progress > 1.0 ? 1.0 : progress;
+    return progress > 1.0 ? 1.0 : progress;
+  }
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+  @override
+  Widget build(BuildContext context) {
+    final liveHours = _computeLiveHours();
+    final progress = _computeProgress();
+
+    return GlassCard(
+      blur: 15,
+      opacity: 0.15,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(20),
+      child: Column(
           children: [
             Text(
               'Attendance',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.grey700,
+                color: context.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              DateFormat('hh:mm a, dd MMM yyyy').format(DateTime.now()),
+              DateFormat('hh:mm:ss a, dd MMM yyyy').format(_now),
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: AppColors.grey500,
+                color: context.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
@@ -83,7 +128,7 @@ class AttendanceTimerCard extends StatelessWidget {
                           showTitle: false,
                         ),
                         PieChartSectionData(
-                          color: AppColors.grey100,
+                          color: context.isDark ? AppColors.grey700 : AppColors.grey100,
                           value: (1 - progress) * 100,
                           title: '',
                           radius: 15,
@@ -91,6 +136,8 @@ class AttendanceTimerCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    swapAnimationDuration: const Duration(milliseconds: 800),
+                    swapAnimationCurve: Curves.easeInOutCubic,
                   ),
                   Center(
                     child: Column(
@@ -100,15 +147,15 @@ class AttendanceTimerCard extends StatelessWidget {
                           'Total Hours',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: AppColors.grey400,
+                            color: context.textTertiary,
                           ),
                         ),
                         Text(
-                          totalHours,
+                          liveHours,
                           style: GoogleFonts.poppins(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.grey900,
+                            color: context.textPrimary,
                           ),
                         ),
                       ],
@@ -121,11 +168,11 @@ class AttendanceTimerCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.grey900,
+                color: context.isDark ? AppColors.grey700 : AppColors.grey900,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                'Production : $totalHours',
+                'Production : $liveHours',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontSize: 12,
@@ -133,11 +180,11 @@ class AttendanceTimerCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            if (clockInTime != null)
+            if (widget.clockInTime != null)
               Text(
-                'Punch In at $clockInTime',
+                'Punch In at ${widget.clockInTime}',
                 style: GoogleFonts.poppins(
-                  color: AppColors.grey500,
+                  color: context.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -145,16 +192,17 @@ class AttendanceTimerCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: onPunch,
+                onPressed: widget.onPunch,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF97316), // Orange
+                  backgroundColor: const Color(0xFFF97316),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: Text(
-                  isClockedIn ? 'Punch Out' : 'Punch In',
+                  widget.isClockedIn ? 'Punch Out' : 'Punch In',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -164,7 +212,6 @@ class AttendanceTimerCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

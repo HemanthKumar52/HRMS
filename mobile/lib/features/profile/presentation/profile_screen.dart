@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -23,7 +24,7 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AdaptiveAppBar(
         title: 'My Profile',
       ),
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: context.scaffoldBg,
       body: SingleChildScrollView(
         padding: EdgeInsets.all(Responsive.horizontalPadding),
         child: Column(
@@ -245,7 +246,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ).animate().fadeIn(delay: 800.ms).slideY(begin: 0.1),
 
-            SizedBox(height: Responsive.value(mobile: 32.0, tablet: 40.0)),
+            SizedBox(height: Responsive.value(mobile: 80.0, tablet: 100.0)),
           ],
         ),
       ),

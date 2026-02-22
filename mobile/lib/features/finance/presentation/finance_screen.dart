@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../core/widgets/glass_card.dart';
@@ -23,7 +24,7 @@ class FinanceScreen extends ConsumerWidget {
 
     return SafeScaffold(
       appBar: AdaptiveAppBar(title: 'Finance'),
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: context.scaffoldBg,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(payslipListProvider);
@@ -50,7 +51,7 @@ class FinanceScreen extends ConsumerWidget {
                       borderRadius:
                           BorderRadius.circular(Responsive.cardRadius),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha:0.2),
                         width: 1,
                       ),
                     ),
@@ -73,7 +74,7 @@ class FinanceScreen extends ConsumerWidget {
                                 const SizedBox(height: 4),
                                 payslipsAsync.when(
                                   data: (payslips) => Text(
-                                    'Rs. ${formatter.format(payslips.isNotEmpty ? payslips.first.grossPay : 0)}',
+                                    '₹${formatter.format(payslips.isNotEmpty ? payslips.first.grossPay : 0)}',
                                     style: GoogleFonts.poppins(
                                       color: Colors.white,
                                       fontSize: Responsive.sp(26),
@@ -100,7 +101,7 @@ class FinanceScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha:0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -123,21 +124,21 @@ class FinanceScreen extends ConsumerWidget {
                               children: [
                                 _buildSalaryStat(
                                   'Gross Salary',
-                                  'Rs. ${formatter.format(latest?.grossPay ?? 0)}/mo',
+                                  '₹${formatter.format(latest?.grossPay ?? 0)}/mo',
                                 ),
                                 SizedBox(
                                     width: Responsive.value(
                                         mobile: 20.0, tablet: 28.0)),
                                 _buildSalaryStat(
                                   'Net Pay',
-                                  'Rs. ${formatter.format(latest?.netPay ?? 0)}/mo',
+                                  '₹${formatter.format(latest?.netPay ?? 0)}/mo',
                                 ),
                                 SizedBox(
                                     width: Responsive.value(
                                         mobile: 20.0, tablet: 28.0)),
                                 _buildSalaryStat(
                                   'Deductions',
-                                  'Rs. ${formatter.format(latest?.totalDeductions ?? 0)}/mo',
+                                  '₹${formatter.format(latest?.totalDeductions ?? 0)}/mo',
                                 ),
                               ],
                             );
@@ -158,8 +159,8 @@ class FinanceScreen extends ConsumerWidget {
                 'Download Payslip',
                 style: GoogleFonts.poppins(
                   fontSize: Responsive.sp(18),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.grey900,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
                 ),
               ).animate().fadeIn(delay: 100.ms),
               SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
@@ -176,18 +177,18 @@ class FinanceScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.grey300),
+                        border: Border.all(color: context.borderColor),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: selectedPeriod,
                           isExpanded: true,
-                          icon: const Icon(Icons.keyboard_arrow_down,
-                              color: AppColors.grey500),
+                          icon: Icon(Icons.keyboard_arrow_down,
+                              color: context.textSecondary),
                           style: GoogleFonts.poppins(
                             fontSize: Responsive.sp(14),
-                            color: AppColors.grey800,
+                            color: context.textPrimary,
                           ),
                           items: const [
                             'Last 1 Month',
@@ -223,18 +224,20 @@ class FinanceScreen extends ConsumerWidget {
                           context.showSnackBar(
                               'Downloading payslip for $selectedPeriod...');
                         },
-                        icon: Icon(Icons.download,
-                            size: Responsive.sp(20)),
+                        icon: Icon(Icons.picture_as_pdf,
+                            size: Responsive.sp(20), color: Colors.white),
                         label: Text(
-                          'Download PDF',
+                          'Download Payslip PDF',
                           style: GoogleFonts.poppins(
-                            fontSize: Responsive.sp(14),
-                            fontWeight: FontWeight.w600,
+                            fontSize: Responsive.sp(15),
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
+                          elevation: 4,
                           shape: RoundedRectangleBorder(
                             borderRadius:
                                 BorderRadius.circular(Responsive.cardRadius),
@@ -253,8 +256,8 @@ class FinanceScreen extends ConsumerWidget {
                 'Recent Payslips',
                 style: GoogleFonts.poppins(
                   fontSize: Responsive.sp(18),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.grey900,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimary,
                 ),
               ).animate().fadeIn(delay: 300.ms),
               SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
@@ -328,7 +331,7 @@ class FinanceScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -347,12 +350,12 @@ class FinanceScreen extends ConsumerWidget {
                   style: GoogleFonts.poppins(
                     fontSize: Responsive.sp(14),
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Net: Rs. ${formatter.format(payslip.netPay)}',
+                  'Net: ₹${formatter.format(payslip.netPay)}',
                   style: GoogleFonts.poppins(
                     fontSize: Responsive.sp(12),
                     color: AppColors.success,
@@ -360,10 +363,10 @@ class FinanceScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Gross: Rs. ${formatter.format(payslip.grossPay)}',
+                  'Gross: ₹${formatter.format(payslip.grossPay)}',
                   style: GoogleFonts.poppins(
                     fontSize: Responsive.sp(11),
-                    color: AppColors.grey500,
+                    color: context.textSecondary,
                   ),
                 ),
               ],

@@ -49,4 +49,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   designation?: string;
+
+  @IsOptional()
+  @IsString()
+  facePhoto?: string;
 }

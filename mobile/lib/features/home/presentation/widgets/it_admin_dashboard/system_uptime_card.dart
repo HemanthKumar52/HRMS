@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class SystemUptimeCard extends StatelessWidget {
   const SystemUptimeCard({super.key});
@@ -61,13 +62,11 @@ class SystemUptimeCard extends StatelessWidget {
   }
 
   Widget _buildUptimeItem(String label, String value, Color color, IconData icon) {
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

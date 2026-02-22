@@ -137,8 +137,31 @@ export class UsersService {
         managerId: data.managerId,
         department: data.department,
         designation: data.designation,
+        facePhoto: data.facePhoto,
       },
     });
+  }
+
+  async getFacePhoto(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { facePhoto: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return { facePhoto: user.facePhoto };
+  }
+
+  async updateAvatar(userId: string, filename: string) {
+    const avatarUrl = `/uploads/avatars/${filename}`;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+    });
+    return { avatarUrl };
   }
 
   async findByEmail(email: string) {

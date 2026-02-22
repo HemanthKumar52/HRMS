@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/asset_dashboard/purchase_trend_chart.dart';
 import 'widgets/asset_dashboard/assets_by_department_chart.dart';
 import 'widgets/asset_dashboard/asset_stats_cards.dart';
@@ -15,16 +17,11 @@ class AssetManagementDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'Asset Management',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'Asset Management',
         actions: [
           FilledButton.icon(
             onPressed: () {},
@@ -92,6 +89,7 @@ class AssetManagementDashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
             const AssetListTable().animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+            const SizedBox(height: 80),
           ],
         ),
       ),

@@ -27,34 +27,37 @@ class AssetsByDepartmentChart extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            // Custom implementation since Horizontal Bar Chart in FL Chart requires rotation which might be tricky with axis titles.
-            // Custom implementation since Horizontal Bar Chart in FL Chart requires rotation which might be tricky with axis titles.
-            _buildBarRow('HR', 0.7, const Color(0xFF264653)),
+            _buildBarRow('HR', 0.7, const Color(0xFF264653), 0),
             const SizedBox(height: 12),
-            _buildBarRow('Finance', 0.9, const Color(0xFF264653)),
+            _buildBarRow('Finance', 0.9, const Color(0xFF264653), 1),
             const SizedBox(height: 12),
-            _buildBarRow('Operations', 0.6, const Color(0xFF264653)),
+            _buildBarRow('Operations', 0.6, const Color(0xFF264653), 2),
             const SizedBox(height: 12),
-            _buildBarRow('Sales', 0.2, const Color(0xFF264653)),
+            _buildBarRow('Sales', 0.2, const Color(0xFF264653), 3),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBarRow(String label, double pct, Color color) {
+  Widget _buildBarRow(String label, double pct, Color color, int index) {
     return Row(
       children: [
         SizedBox(width: 60, child: Text(label, style: GoogleFonts.poppins(fontSize: 10, color: AppColors.grey600))),
         Expanded(
-          child: Stack(
-            children: [
-              Container(height: 20, decoration: BoxDecoration(color: AppColors.grey100, borderRadius: BorderRadius.circular(4))),
-              FractionallySizedBox(
-                widthFactor: pct,
-                child: Container(height: 20, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-              ),
-            ],
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: pct),
+            duration: Duration(milliseconds: 800 + index * 150),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) => Stack(
+              children: [
+                Container(height: 20, decoration: BoxDecoration(color: AppColors.grey100, borderRadius: BorderRadius.circular(4))),
+                FractionallySizedBox(
+                  widthFactor: value,
+                  child: Container(height: 20, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+                ),
+              ],
+            ),
           ),
         ),
       ],

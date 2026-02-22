@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +30,7 @@ class LeaveScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.filter_list,
+              Icons.filter_alt_outlined,
               color: selectedFilter != null
                   ? AppColors.primary
                   : AppColors.grey500,
@@ -167,40 +168,17 @@ class LeaveScreen extends ConsumerWidget {
       // Glass FAB - icon only, positioned above nav bar
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 72),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.9),
+        child: FloatingActionButton(
+          onPressed: () => context.pushNamed('apply-leave'),
+          backgroundColor: AppColors.primary,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.4),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.1),
-                blurRadius: 8,
-                spreadRadius: -2,
-              ),
-            ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => context.pushNamed('apply-leave'),
-              borderRadius: BorderRadius.circular(16),
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 28,
           ),
         ),
       ),
@@ -241,6 +219,8 @@ class LeaveScreen extends ConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(Responsive.cardRadius * 1.5),
@@ -248,13 +228,29 @@ class LeaveScreen extends ConsumerWidget {
       ),
       builder: (context) {
         LeaveStatus? tempFilter = currentFilter;
-        return StatefulBuilder(
-          builder: (context, setModalState) => SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(Responsive.horizontalPadding * 1.5),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        return ClipRRect(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(Responsive.cardRadius * 1.5),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: StatefulBuilder(
+              builder: (context, setModalState) => SafeArea(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withOpacity(0.85),
+                        Colors.white.withOpacity(0.70),
+                      ],
+                    ),
+                  ),
+                  padding: EdgeInsets.all(Responsive.horizontalPadding * 1.5),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Handle bar
                   Center(
@@ -340,6 +336,8 @@ class LeaveScreen extends ConsumerWidget {
                   SizedBox(
                       height: Responsive.bottomSafeArea > 0 ? 0 : 16),
                 ],
+              ),
+            ),
               ),
             ),
           ),

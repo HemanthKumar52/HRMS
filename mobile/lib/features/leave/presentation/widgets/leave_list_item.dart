@@ -150,6 +150,8 @@ class LeaveListItem extends StatelessWidget {
         return Colors.purpleAccent;
       case LeaveType.compensatory:
         return AppColors.secondary;
+      case LeaveType.permission:
+        return Colors.teal;
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class ProjectsList extends StatelessWidget {
   const ProjectsList({super.key});
@@ -18,13 +20,13 @@ class ProjectsList extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppColors.grey900,
+                color: context.textPrimary,
               ),
             ),
              Row(
                children: [
-                 Text('Ongoing Projects', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
-                 const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.grey600),
+                 Text('Ongoing Projects', style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
+                 Icon(Icons.keyboard_arrow_down, size: 16, color: context.textSecondary),
                ],
              ),
           ],
@@ -89,12 +91,11 @@ class _ProjectCard extends StatelessWidget {
     return Container(
       width: 280,
       margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
+      child: GlassCard(
+        blur: 12,
+        opacity: 0.15,
+        borderRadius: 16,
+        padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -109,7 +110,7 @@ class _ProjectCard extends StatelessWidget {
                   fontSize: 14,
                 ),
               ),
-              const Icon(Icons.more_vert, size: 18, color: AppColors.grey500),
+              Icon(Icons.more_vert, size: 18, color: context.textTertiary),
             ],
           ),
           Row(
@@ -133,7 +134,7 @@ class _ProjectCard extends StatelessWidget {
                     'Project Leader',
                     style: GoogleFonts.poppins(
                       fontSize: 10,
-                      color: AppColors.grey500,
+                      color: context.textTertiary,
                     ),
                   ),
                 ],
@@ -142,27 +143,28 @@ class _ProjectCard extends StatelessWidget {
           ),
           Row(
             children: [
-              _buildDateItem(Icons.calendar_today, deadline, color),
+              _buildDateItem(context, Icons.calendar_today, deadline, color),
               const SizedBox(width: 16),
-              _buildDateItem(Icons.playlist_add_check, 'Tasks : $tasks', Colors.green),
+              _buildDateItem(context, Icons.playlist_add_check, 'Tasks : $tasks', Colors.green),
             ],
           ),
            LinearProgressIndicator(
               value: progress,
-              backgroundColor: AppColors.grey200,
+              backgroundColor: context.isDark ? AppColors.grey700 : AppColors.grey200,
               valueColor: AlwaysStoppedAnimation(color),
               borderRadius: BorderRadius.circular(4),
            ),
         ],
       ),
+      ),
     );
   }
 
-  Widget _buildDateItem(IconData icon, String text, Color color) {
+  Widget _buildDateItem(BuildContext context, IconData icon, String text, Color color) {
      return Container(
        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
        decoration: BoxDecoration(
-         color: AppColors.grey50,
+         color: context.isDark ? AppColors.grey800 : AppColors.grey50,
          borderRadius: BorderRadius.circular(4),
        ),
        child: Row(
@@ -171,7 +173,7 @@ class _ProjectCard extends StatelessWidget {
            const SizedBox(width: 4),
            Text(
              text,
-             style: GoogleFonts.poppins(fontSize: 10, color: AppColors.grey700),
+             style: GoogleFonts.poppins(fontSize: 10, color: context.textSecondary),
            ),
          ],
        ),

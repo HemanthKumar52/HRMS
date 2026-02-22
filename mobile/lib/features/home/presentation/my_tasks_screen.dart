@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism_ui/glassmorphism_ui.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/attendance_dashboard/employee_attendance_dashboard.dart';
 import 'widgets/dashboard_drawer.dart';
 
@@ -32,14 +35,11 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text('Employee Dashboard', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900)),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'My Tasks',
         actions: [
           IconButton(onPressed: (){}, icon: const Icon(Icons.notifications_none, color: AppColors.grey900)),
           const Padding(
@@ -79,7 +79,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
             
             // Projects Horizontal List
             SizedBox(
-              height: 180,
+              height: 210,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _projects.length,
@@ -110,11 +110,11 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
             const SizedBox(height: 16),
 
             // Task List
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: 16,
+              padding: EdgeInsets.zero,
               child: ListView.separated(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
@@ -142,11 +142,11 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
             ),
             const SizedBox(height: 8),
             
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            GlassCard(
+              blur: 12,
+              opacity: 0.15,
+              borderRadius: 16,
+              padding: EdgeInsets.zero,
               child: Column(
                 children: [
                    _buildTimesheetItem('HR System V2', 'Developing API endpoints', '4h 30m'),
@@ -199,13 +199,13 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     );
   }
   Widget _buildProjectCard(Map<String, dynamic> project) {
-    return Container(
+    return SizedBox(
       width: 280,
+      child: GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -235,7 +235,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                ),
              ],
            ),
-           const Spacer(),
+           const SizedBox(height: 12),
            Row(
              children: [
                 _buildTag(Icons.calendar_today, project['date'], Colors.blue),
@@ -254,6 +254,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
              ),
            ),
         ],
+      ),
       ),
     );
   }

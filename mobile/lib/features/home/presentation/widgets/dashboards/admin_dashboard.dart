@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
 import '../../../../../core/widgets/glass_card.dart';
-import '../../../../auth/providers/auth_provider.dart';
 
 class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({super.key});
@@ -15,7 +14,12 @@ class AdminDashboard extends ConsumerWidget {
     // final user = ref.watch(currentUserProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.of(context).padding.top + kToolbarHeight + 16,
+        16,
+        16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -42,7 +46,7 @@ class AdminDashboard extends ConsumerWidget {
                 ),
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
                   child: const Icon(Icons.analytics, color: Colors.white, size: 32),
                 ),
               ],
@@ -54,25 +58,25 @@ class AdminDashboard extends ConsumerWidget {
           // User Stats
           Row(
             children: [
-              _buildMetricCard('Total Users', '150', Icons.people, Colors.blue),
+              _buildMetricCard(context, 'Total Users', '150', Icons.people, Colors.blue),
               const SizedBox(width: 16),
-              _buildMetricCard('Departments', '8', Icons.domain, Colors.purple),
+              _buildMetricCard(context, 'Departments', '8', Icons.domain, Colors.purple),
             ],
           ).animate().fadeIn(delay: 100.ms),
-          
+
           const SizedBox(height: 16),
-          
+
           Row(
             children: [
-              _buildMetricCard('New Hires', '5', Icons.person_add, Colors.green),
+              _buildMetricCard(context, 'New Hires', '5', Icons.person_add, Colors.green),
               const SizedBox(width: 16),
-              _buildMetricCard('Pending', '3', Icons.pending_actions, Colors.orange),
+              _buildMetricCard(context, 'Pending', '3', Icons.pending_actions, Colors.orange),
             ],
           ).animate().fadeIn(delay: 200.ms),
 
           const SizedBox(height: 24),
           
-          Text('System Actions', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+          Text('System Actions', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: context.textPrimary)),
           const SizedBox(height: 16),
           
           Wrap(
@@ -88,22 +92,23 @@ class AdminDashboard extends ConsumerWidget {
 
           const SizedBox(height: 24),
           
-          Text('Recent Audit Logs', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+          Text('Recent Audit Logs', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: context.textPrimary)),
           const SizedBox(height: 8),
           
           Column(
             children: [
-              _buildLogItem('User Created - Sarah J.', '2 mins ago'),
-              _buildLogItem('Policy Updated - Leave 2024', '1 hour ago'),
-              _buildLogItem('System Backup Completed', '4 hours ago'),
+              _buildLogItem(context, 'User Created - Sarah J.', '2 mins ago'),
+              _buildLogItem(context, 'Policy Updated - Leave 2024', '1 hour ago'),
+              _buildLogItem(context, 'System Backup Completed', '4 hours ago'),
             ],
           ),
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(BuildContext context, String label, String value, IconData icon, Color color) {
     return Expanded(
       child: GlassCard(
         blur: 10,
@@ -114,8 +119,8 @@ class AdminDashboard extends ConsumerWidget {
           children: [
             Icon(icon, color: color, size: 28),
             const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.grey900)),
-            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey500)),
+            Text(value, style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: context.textPrimary)),
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
           ],
         ),
       ),
@@ -130,9 +135,9 @@ class AdminDashboard extends ConsumerWidget {
         width: (MediaQuery.of(context).size.width - 48) / 2, // 2 column grid approx
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -145,11 +150,11 @@ class AdminDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildLogItem(String title, String time) {
+  Widget _buildLogItem(BuildContext context, String title, String time) {
     return ListTile(
-      leading: const Icon(Icons.history, color: Colors.grey, size: 20),
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      trailing: Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      leading: Icon(Icons.history, color: context.textTertiary, size: 20),
+      title: Text(title, style: TextStyle(fontSize: 14, color: context.textPrimary)),
+      trailing: Text(time, style: TextStyle(color: context.textTertiary, fontSize: 12)),
       dense: true,
       contentPadding: EdgeInsets.zero,
     );

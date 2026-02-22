@@ -101,6 +101,8 @@ class ApplyLeaveNotifier extends StateNotifier<AsyncValue<void>> {
     bool isHalfDay = false,
     HalfDayType? halfDayType,
     required String reason,
+    DateTime? compensatoryDate,
+    double? permissionHours,
   }) async {
     state = const AsyncValue.loading();
     await Future.delayed(const Duration(seconds: 1)); // Mock Network Delay
@@ -116,6 +118,8 @@ class ApplyLeaveNotifier extends StateNotifier<AsyncValue<void>> {
       isHalfDay: isHalfDay,
       halfDayType: halfDayType,
       reason: reason,
+      compensatoryDate: compensatoryDate,
+      permissionHours: permissionHours,
       createdAt: DateTime.now(),
     );
 

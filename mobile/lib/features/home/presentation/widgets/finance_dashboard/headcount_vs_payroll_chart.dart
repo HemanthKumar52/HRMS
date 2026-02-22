@@ -47,7 +47,7 @@ class HeadcountVsPayrollChart extends StatelessWidget {
                        x: index,
                        barRods: [
                          BarChartRodData(
-                            toY: (index % 2 == 0 ? 10 : 15).toDouble() + (index * 0.5), 
+                            toY: (index % 2 == 0 ? 10 : 15).toDouble() + (index * 0.5),
                             color: Colors.deepOrange,
                             width: 8,
                             borderRadius: BorderRadius.circular(2),
@@ -76,6 +76,8 @@ class HeadcountVsPayrollChart extends StatelessWidget {
                   gridData: FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOutCubic,
               ),
             ),
           ],

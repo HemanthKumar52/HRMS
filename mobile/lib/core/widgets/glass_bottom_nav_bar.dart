@@ -31,29 +31,49 @@ class GlassBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withOpacity(0.25),
-                width: 0.5,
-              ),
+            // Liquid glass gradient fill
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [
+                      Colors.white.withOpacity(0.12),
+                      Colors.white.withOpacity(0.06),
+                    ]
+                  : [
+                      Colors.white.withOpacity(0.85),
+                      Colors.white.withOpacity(0.65),
+                    ],
             ),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: Colors.white.withOpacity(isDark ? 0.15 : 0.6),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+                spreadRadius: -4,
+              ),
+            ],
           ),
           child: SafeArea(
             top: false,
             child: Padding(
               padding: EdgeInsets.only(
-                top: 8,
-                bottom: bottomPadding > 0 ? 0 : 8,
+                top: 10,
+                bottom: bottomPadding > 0 ? 0 : 10,
                 left: 8,
                 right: 8,
               ),
@@ -99,28 +119,34 @@ class _GlassNavItemWidget extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Active pill background
+          // Active pill background with glass effect
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
             padding: EdgeInsets.symmetric(
-              horizontal: isActive ? 16 : 12,
-              vertical: isActive ? 6 : 4,
+              horizontal: isActive ? 18 : 12,
+              vertical: isActive ? 8 : 4,
             ),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppColors.primary.withOpacity(0.15)
+                  ? AppColors.primary.withOpacity(0.12)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
+              border: isActive
+                  ? Border.all(
+                      color: AppColors.primary.withOpacity(0.2),
+                      width: 0.5,
+                    )
+                  : null,
             ),
             child: Icon(
               isActive ? item.activeIcon : item.icon,
-              color: isActive ? AppColors.primary : AppColors.grey500,
-              size: isActive ? 26 : 24,
+              color: isActive ? AppColors.primary : AppColors.grey600,
+              size: isActive ? 26 : 23,
             ),
           ).animate(target: isActive ? 1 : 0).scale(
                 begin: const Offset(0.9, 0.9),
@@ -128,13 +154,13 @@ class _GlassNavItemWidget extends StatelessWidget {
                 duration: 200.ms,
                 curve: Curves.easeOutBack,
               ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
               fontSize: isActive ? 11 : 10,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? AppColors.primary : AppColors.grey500,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              color: isActive ? AppColors.primary : AppColors.grey600,
             ),
             child: Text(item.label),
           ),

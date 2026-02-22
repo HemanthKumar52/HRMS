@@ -3,8 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../../../core/theme/app_colors.dart';
-import '../../../../../../core/widgets/glass_card.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/hr_dashboard/employee_status_card.dart';
 import 'widgets/hr_dashboard/hr_overview_grid.dart';
 import 'widgets/hr_dashboard/hr_charts_section.dart';
@@ -15,19 +16,11 @@ class HrDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'HR Dashboard',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: AppColors.grey900,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'HR Dashboard',
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today_outlined, color: AppColors.grey600),
@@ -35,11 +28,11 @@ class HrDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: () => context.push('/add-employee'),
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add New'),
+            label: const Text('Add Employee'),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFF8A65), // Orange
+              backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(horizontal: 16),
             ),
           ),
@@ -69,6 +62,7 @@ class HrDashboardScreen extends StatelessWidget {
                 ),
               ),
             ).animate().fadeIn(delay: 600.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),

@@ -3,6 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/dynamic_island_notification.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import '../providers/ticket_provider.dart';
 
 class CreateTicketScreen extends ConsumerStatefulWidget {
@@ -77,27 +81,27 @@ class _CreateTicketScreenState extends ConsumerState<CreateTicketScreen> {
     
     // Actually, I'll just use the button interaction.
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text('Raise Ticket', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 0,
+    return SafeScaffold(
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'Create Ticket',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => context.pop(),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
+              GlassCard(
+                blur: 12,
+                opacity: 0.15,
+                borderRadius: 12,
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                 child: Column(
                   children: [
                     DropdownButtonFormField<String>(
@@ -133,7 +137,7 @@ class _CreateTicketScreenState extends ConsumerState<CreateTicketScreen> {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -146,20 +150,21 @@ class _CreateTicketScreenState extends ConsumerState<CreateTicketScreen> {
                         'department': _department,
                         'priority': _priority,
                       });
-                      
+
                       // Check result
                       if (context.mounted && !ref.read(createTicketProvider).hasError) {
-                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ticket Raised Successfully')));
+                         DynamicIslandManager().show(context, message: 'Ticket raised successfully');
                          context.pop();
                       }
                     }
                   },
                   style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                  child: isLoading 
-                     ? const CircularProgressIndicator(color: Colors.white) 
+                  child: isLoading
+                     ? const CircularProgressIndicator(color: Colors.white)
                      : Text('Raise Ticket', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
                 ),
               ),
+              const SizedBox(height: 80),
             ],
           ),
         ),

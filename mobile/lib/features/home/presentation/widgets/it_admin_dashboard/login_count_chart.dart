@@ -28,7 +28,7 @@ class LoginCountChart extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: const [
-                        FlSpot(0, 300), FlSpot(1, 450), FlSpot(2, 320), FlSpot(3, 500), 
+                        FlSpot(0, 300), FlSpot(1, 450), FlSpot(2, 320), FlSpot(3, 500),
                         FlSpot(4, 400), FlSpot(5, 600), FlSpot(6, 550), FlSpot(7, 300),
                         FlSpot(8, 400), FlSpot(9, 600), FlSpot(10, 500), FlSpot(11, 450),
                       ],

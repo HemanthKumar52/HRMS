@@ -68,7 +68,7 @@ class TicketTrendsChart extends StatelessWidget {
                         dotData: FlDotData(show: true, getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(radius: 2, color: const Color(0xFF264653), strokeWidth: 0)),
                       ),
                     ],
-                 )
+                 ),
                ),
              ),
              const SizedBox(height: 16),

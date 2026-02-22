@@ -4,6 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../../core/widgets/glass_card.dart';
 
 class EmployeeAttendanceDashboard extends StatefulWidget {
   const EmployeeAttendanceDashboard({super.key});
@@ -119,16 +121,14 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Work Mode Selector
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
+        GlassCard(
+          blur: 12,
+          opacity: 0.15,
+          borderRadius: 30,
           padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: AppColors.grey200),
-          ),
           child: Row(
             children: [
               _buildModeBtn('Work from Office', Icons.business),
@@ -161,7 +161,7 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                         circles: [
                           CircleMarker(
                             point: _companyLocation,
-                            color: Colors.blue.withOpacity(0.3),
+                            color: Colors.blue.withValues(alpha: 0.3),
                             borderStrokeWidth: 2,
                             borderColor: Colors.blue,
                             radius: 100, // 100m radius
@@ -185,9 +185,9 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: context.surfaceBg.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(8),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
                       ),
                       child: Row(
                         children: [
@@ -197,7 +197,7 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                           Expanded(
                             child: Text(
                               _geoFenceValidated ? 'Location Verified: Olympia Pinnacle' : 'Verifying Location...',
-                              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: context.textPrimary),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -223,7 +223,7 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                    Container(
                      padding: const EdgeInsets.all(16),
                      decoration: BoxDecoration(
-                       color: Colors.orange.withOpacity(0.1),
+                       color: Colors.orange.withValues(alpha: 0.1),
                        shape: BoxShape.circle,
                      ),
                      child: const Icon(Icons.hourglass_top, size: 40, color: Colors.orange),
@@ -235,16 +235,16 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                   ),
                    Text(
                     'Request sent to Manager',
-                    style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey500),
+                    style: GoogleFonts.poppins(fontSize: 14, color: context.textSecondary),
                   ),
                 ] else ...[
                   Text(
-                    _isClockedIn ? '04h 23m' : '00h 00m', 
-                    style: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.bold, color: AppColors.grey900),
+                    _isClockedIn ? '04h 23m' : '00h 00m',
+                    style: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.bold, color: context.textPrimary),
                   ),
                    Text(
                     _isClockedIn ? 'Working Since 09:00 AM' : 'Not Clocked In',
-                    style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey500),
+                    style: GoogleFonts.poppins(fontSize: 14, color: context.textSecondary),
                   ),
                   const SizedBox(height: 32),
                   
@@ -263,7 +263,7 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                         ),
                         boxShadow: [
                            BoxShadow(
-                             color: (_isClockedIn ? Colors.red : Colors.green).withOpacity(0.4),
+                             color: (_isClockedIn ? Colors.red : Colors.green).withValues(alpha: 0.4),
                              blurRadius: 20,
                              offset: const Offset(0, 10),
                            )
@@ -290,9 +290,9 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                   Row(
                      mainAxisAlignment: MainAxisAlignment.center,
                      children: [
-                       const Icon(Icons.fingerprint, size: 16, color: AppColors.grey500),
+                       Icon(Icons.fingerprint, size: 16, color: context.textSecondary),
                        const SizedBox(width: 8),
-                       Text('Synced with Biometric', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey500)),
+                       Text('Synced with Biometric', style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
                      ],
                   ),
               ],
@@ -305,7 +305,7 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
         // Attendance History with Filters
         Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: AppColors.grey200)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: context.borderColor)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -314,10 +314,10 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Attendance History', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+                    Text('Attendance History', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16, color: context.textPrimary)),
                     // Filter Toggles
                     Container(
-                      decoration: BoxDecoration(color: AppColors.grey100, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: context.dividerColor, borderRadius: BorderRadius.circular(8)),
                       child: Row(
                         children: [
                            _buildFilterBtn('Day'),
@@ -353,10 +353,10 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
           ),
           child: Column(
              children: [
-               Icon(icon, color: isSelected ? Colors.white : AppColors.grey500, size: 20),
+               Icon(icon, color: isSelected ? Colors.white : context.textSecondary, size: 20),
                const SizedBox(height: 4),
-               Text(mode == 'Work from Home' ? 'WFH' : (mode == 'Work from Office' ? 'Office' : 'Field'), 
-                 style: GoogleFonts.poppins(fontSize: 10, color: isSelected ? Colors.white : AppColors.grey600, fontWeight: FontWeight.w500)),
+               Text(mode == 'Work from Home' ? 'WFH' : (mode == 'Work from Office' ? 'Office' : 'Field'),
+                 style: GoogleFonts.poppins(fontSize: 10, color: isSelected ? Colors.white : context.textSecondary, fontWeight: FontWeight.w500)),
              ],
           ),
         ),
@@ -371,29 +371,28 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
        child: Container(
          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
          decoration: BoxDecoration(
-           color: isSelected ? Colors.white : Colors.transparent,
+           color: isSelected ? context.surfaceBg : Colors.transparent,
            borderRadius: BorderRadius.circular(6),
-           boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2)] : [],
+           boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2)] : [],
          ),
-         child: Text(text, style: GoogleFonts.poppins(fontSize: 12, color: isSelected ? Colors.black : AppColors.grey500, fontWeight: FontWeight.w500)),
+         child: Text(text, style: GoogleFonts.poppins(fontSize: 12, color: isSelected ? context.textPrimary : context.textSecondary, fontWeight: FontWeight.w500)),
        ),
      );
   }
 
   Widget _buildHistoryItem(String day, String inTime, String outTime, String location, bool isActive) {
-     return Container(
-       margin: const EdgeInsets.only(bottom: 12),
-       padding: const EdgeInsets.all(12),
-       decoration: BoxDecoration(
-         color: Colors.white,
-         border: Border.all(color: AppColors.grey100),
-         borderRadius: BorderRadius.circular(12),
-       ),
+     return Padding(
+       padding: const EdgeInsets.only(bottom: 12),
+       child: GlassCard(
+         blur: 10,
+         opacity: 0.12,
+         borderRadius: 16,
+         padding: const EdgeInsets.all(12),
        child: Row(
          children: [
            Container(
              padding: const EdgeInsets.all(10),
-             decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
              child: Icon(location == 'Office' ? Icons.business : Icons.home, color: AppColors.primary, size: 18),
            ),
            const SizedBox(width: 12),
@@ -401,20 +400,21 @@ class _EmployeeAttendanceDashboardState extends State<EmployeeAttendanceDashboar
              child: Column(
                crossAxisAlignment: CrossAxisAlignment.start,
                children: [
-                 Text(day, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-                 Text(location, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey500)),
+                 Text(day, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: context.textPrimary)),
+                 Text(location, style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
                ],
              ),
            ),
            Column(
              crossAxisAlignment: CrossAxisAlignment.end,
              children: [
-               Text(isActive ? 'Clocked In' : '8h 30m', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.black87)),
-               Text('$inTime - $outTime', style: GoogleFonts.poppins(fontSize: 10, color: AppColors.grey500)),
+               Text(isActive ? 'Clocked In' : '8h 30m', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: isActive ? Colors.green : context.textPrimary)),
+               Text('$inTime - $outTime', style: GoogleFonts.poppins(fontSize: 10, color: context.textSecondary)),
              ],
            ),
          ],
        ),
+     ),
      );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import '../data/notification_model.dart';
 import '../providers/notification_provider.dart';
 
@@ -36,9 +37,9 @@ class NotificationsScreen extends ConsumerWidget {
 
     final notificationsAsync = ref.watch(notificationsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
+    return SafeScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Notifications',
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -89,7 +90,7 @@ class NotificationsScreen extends ConsumerWidget {
               );
             }
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
               itemCount: notifications.length,
               itemBuilder: (context, index) {
                 return _NotificationCard(

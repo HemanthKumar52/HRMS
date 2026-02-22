@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum LeaveType { casual, sick, earned, unpaid, parental, od, compensatory }
+enum LeaveType { casual, sick, earned, unpaid, parental, od, compensatory, permission }
 
 enum LeaveStatus { pending, approved, rejected, cancelled }
 
@@ -17,6 +17,8 @@ class LeaveModel extends Equatable {
   final HalfDayType? halfDayType;
   final String? reason;
   final String? rejectReason;
+  final DateTime? compensatoryDate;
+  final double? permissionHours;
   final String? approvedBy;
   final DateTime? approvedAt;
   final DateTime createdAt;
@@ -32,6 +34,8 @@ class LeaveModel extends Equatable {
     this.halfDayType,
     this.reason,
     this.rejectReason,
+    this.compensatoryDate,
+    this.permissionHours,
     this.approvedBy,
     this.approvedAt,
     required this.createdAt,
@@ -61,6 +65,12 @@ class LeaveModel extends Equatable {
           : null,
       reason: json['reason'],
       rejectReason: json['rejectReason'],
+      compensatoryDate: json['compensatoryDate'] != null
+          ? DateTime.parse(json['compensatoryDate'])
+          : null,
+      permissionHours: json['permissionHours'] != null
+          ? (json['permissionHours'] as num).toDouble()
+          : null,
       approvedBy: json['approvedBy'],
       approvedAt:
           json['approvedAt'] != null ? DateTime.parse(json['approvedAt']) : null,
@@ -86,6 +96,8 @@ class LeaveModel extends Equatable {
         return LeaveType.od;
       case 'COMPENSATORY':
         return LeaveType.compensatory;
+      case 'PERMISSION':
+        return LeaveType.permission;
       default:
         return LeaveType.casual;
     }
@@ -128,6 +140,8 @@ class LeaveModel extends Equatable {
         isHalfDay,
         halfDayType,
         reason,
+        compensatoryDate,
+        permissionHours,
       ];
 }
 

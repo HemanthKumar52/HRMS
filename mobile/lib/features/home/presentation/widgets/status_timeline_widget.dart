@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/glass_card.dart';
 
 class StatusTimelineWidget extends StatelessWidget {
   const StatusTimelineWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.grey200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Request Status', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
@@ -43,7 +41,6 @@ class StatusTimelineWidget extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 

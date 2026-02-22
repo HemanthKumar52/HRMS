@@ -8,12 +8,25 @@ class ApiConstants {
     }
 
     if (Platform.isAndroid) {
-      // Android emulator uses 10.0.2.2 to access host machine's localhost
-      return 'http://10.0.2.2:3000/api/v1';
+      // Use local IP for physical device testing
+      return 'http://192.168.1.4:3000/api/v1';
     }
 
     // iOS simulator, Windows, macOS, Linux can use localhost
     return 'http://localhost:3000/api/v1';
+  }
+
+  /// Blink detection Flask server (liveness verification)
+  static String get blinkServerUrl {
+    if (kIsWeb) {
+      return 'http://localhost:5000';
+    }
+
+    if (Platform.isAndroid) {
+      return 'http://192.168.1.4:5000';
+    }
+
+    return 'http://localhost:5000';
   }
 
   // Auth
@@ -41,8 +54,24 @@ class ApiConstants {
 
   // Users
   static const String users = '/users';
+  static const String userFacePhoto = '/users/me/face-photo';
   static String userProfile(String id) => '/users/$id';
   static String userTeam(String id) => '/users/$id/team';
+
+  // Timesheet
+  static const String timesheetCurrent = '/timesheet/current';
+  static const String timesheetHistory = '/timesheet/history';
+  static String timesheetSubmit(String id) => '/timesheet/$id/submit';
+  static String timesheetDetail(String id) => '/timesheet/$id/detail';
+  static String timesheetAddTask(String id) => '/timesheet/$id/tasks';
+  static String timesheetUpdateTask(String taskId) => '/timesheet/tasks/$taskId';
+  static String timesheetDeleteTask(String taskId) => '/timesheet/tasks/$taskId';
+
+  // Shift Requests
+  static const String shiftRequests = '/shift-requests';
+  static String shiftRequestApprove(String id) => '/shift-requests/$id/approve';
+  static String shiftRequestReject(String id) => '/shift-requests/$id/reject';
+  static String shiftRequestCancel(String id) => '/shift-requests/$id/cancel';
 
   // Notifications
   static const String notifications = '/notifications';

@@ -3,6 +3,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/dashboard_drawer.dart';
 
 class ManagerDashboardScreen extends StatelessWidget {
@@ -10,16 +13,11 @@ class ManagerDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'Manager Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: const AdaptiveAppBar(
+        title: 'Manager Dashboard',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -121,6 +119,7 @@ class ManagerDashboardScreen extends StatelessWidget {
                 ),
               ),
             ).animate().fadeIn(delay: 400.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -128,13 +127,11 @@ class ManagerDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

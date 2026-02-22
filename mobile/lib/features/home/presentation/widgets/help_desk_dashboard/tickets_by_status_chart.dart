@@ -52,6 +52,8 @@ class TicketsByStatusChart extends StatelessWidget {
                              PieChartSectionData(color: Colors.transparent, value: 60, showTitle: false, radius: 10),
                            ],
                          ),
+                         swapAnimationDuration: const Duration(milliseconds: 800),
+                         swapAnimationCurve: Curves.easeInOutCubic,
                        ),
                         PieChart(
                          PieChartData(
@@ -63,6 +65,8 @@ class TicketsByStatusChart extends StatelessWidget {
                              PieChartSectionData(color: Colors.transparent, value: 70, showTitle: false, radius: 10),
                            ],
                          ),
+                         swapAnimationDuration: const Duration(milliseconds: 800),
+                         swapAnimationCurve: Curves.easeInOutCubic,
                        ),
                         PieChart(
                          PieChartData(
@@ -74,6 +78,8 @@ class TicketsByStatusChart extends StatelessWidget {
                              PieChartSectionData(color: Colors.transparent, value: 80, showTitle: false, radius: 10),
                            ],
                          ),
+                         swapAnimationDuration: const Duration(milliseconds: 800),
+                         swapAnimationCurve: Curves.easeInOutCubic,
                        ),
                        // Purple Ring
                         PieChart(
@@ -86,6 +92,8 @@ class TicketsByStatusChart extends StatelessWidget {
                              PieChartSectionData(color: Colors.transparent, value: 90, showTitle: false, radius: 10),
                            ],
                          ),
+                         swapAnimationDuration: const Duration(milliseconds: 800),
+                         swapAnimationCurve: Curves.easeInOutCubic,
                        ),
                      ],
                    ),

@@ -61,13 +61,15 @@ class _LeaveTypeDistributionCard extends StatelessWidget {
                         PieChartSectionData(color: Colors.orange, value: 45, radius: 10, showTitle: false),
                         PieChartSectionData(color: const Color(0xFF455A64), value: 60, radius: 10, showTitle: false),
                         PieChartSectionData(color: Colors.grey, value: 12, radius: 10, showTitle: false),
-                        // Transparent section to make it a semi-circle if needed, 
-                        // but fl_chart draws full circle by default. 
+                        // Transparent section to make it a semi-circle if needed,
+                        // but fl_chart draws full circle by default.
                         // For a simple semi-circle, we usually just render full data or use specific offset.
                         // Let's stick to full circle but thin for now to look like gauge
-                        PieChartSectionData(color: Colors.transparent, value: 100, radius: 10, showTitle: false), 
+                        PieChartSectionData(color: Colors.transparent, value: 100, radius: 10, showTitle: false),
                       ],
                     ),
+                    swapAnimationDuration: const Duration(milliseconds: 800),
+                    swapAnimationCurve: Curves.easeInOutCubic,
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -158,6 +160,8 @@ class _AttendanceTrendCard extends StatelessWidget {
                   borderData: FlBorderData(show: false),
                   gridData: const FlGridData(show: false),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOutCubic,
               ),
             ),
           ],

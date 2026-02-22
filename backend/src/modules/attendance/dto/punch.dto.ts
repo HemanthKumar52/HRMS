@@ -6,12 +6,16 @@ import {
   IsBoolean,
   IsDateString,
 } from 'class-validator';
-import { PunchType } from '@prisma/client';
+import { PunchType, WorkMode } from '@prisma/client';
 
 export class PunchDto {
   @IsOptional()
   @IsEnum(PunchType)
   punchType?: PunchType;
+
+  @IsOptional()
+  @IsEnum(WorkMode)
+  workMode?: WorkMode;
 
   @IsOptional()
   @IsNumber()

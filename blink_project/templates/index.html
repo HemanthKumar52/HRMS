@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blink Capture</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px #aaa;
+        }
+
+        video {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #message {
+            font-size: 24px;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #spectacleWarning {
+            display: none;
+            padding: 15px;
+            margin: 15px 0;
+            background-color: #ff6b6b;
+            color: white;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            animation: blink-warning 0.5s infinite;
+        }
+
+        @keyframes blink-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #permissionButton {
+            display: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #permissionButton:hover {
+            background-color: #45a049;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="message">Loading camera...</div>
+        <div id="spectacleWarning">⚠️ SPECTACLES DETECTED - Please remove them</div>
+        <button id="permissionButton" onclick="requestCameraPermission()">Allow Camera Access</button>
+    </div>
+
+    <!-- MediaPipe dependencies -->
+    <script async src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+    <!-- Local app script -->
+    <script src="/static/app.js"></script>
+
+</body>
+</html>

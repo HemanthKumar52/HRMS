@@ -33,7 +33,7 @@ class PulseLogo extends StatelessWidget {
             vertical: 10 * size,
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(100),
             boxShadow: [
               BoxShadow(
@@ -52,7 +52,7 @@ class PulseLogo extends StatelessWidget {
                   fontSize: 26 * size,
                   fontWeight: FontWeight.w900,
                   fontStyle: FontStyle.italic,
-                  color: textColor,
+                  color: const Color(0xFF1E1E2E),
                 ),
               ),
               Text(
@@ -61,7 +61,7 @@ class PulseLogo extends StatelessWidget {
                   fontSize: 28 * size,
                   fontWeight: FontWeight.w300,
                   fontStyle: FontStyle.italic,
-                  color: textColor,
+                  color: const Color(0xFF1E1E2E),
                 ),
               ),
             ],

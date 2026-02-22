@@ -6,24 +6,25 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/dynamic_island_notification.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../data/leave_model.dart';
 import '../providers/leave_provider.dart';
 
 /// Duration type for leave
-enum LeaveDurationType { fullDay, firstHalf, secondHalf }
+enum LeaveDurationType { fullDay, halfDay }
 
 extension LeaveDurationTypeExtension on LeaveDurationType {
   String get displayName {
     switch (this) {
       case LeaveDurationType.fullDay:
         return 'Full Day';
-      case LeaveDurationType.firstHalf:
-        return 'First Half';
-      case LeaveDurationType.secondHalf:
-        return 'Second Half';
+      case LeaveDurationType.halfDay:
+        return 'Half Day';
     }
   }
 
@@ -31,10 +32,8 @@ extension LeaveDurationTypeExtension on LeaveDurationType {
     switch (this) {
       case LeaveDurationType.fullDay:
         return Icons.wb_sunny;
-      case LeaveDurationType.firstHalf:
+      case LeaveDurationType.halfDay:
         return Icons.wb_twighlight;
-      case LeaveDurationType.secondHalf:
-        return Icons.nights_stay;
     }
   }
 }
@@ -55,6 +54,8 @@ String _getLeaveTypeDisplayName(LeaveType type) {
       return 'On Duty (OD)';
     case LeaveType.compensatory:
       return 'Compensatory';
+    case LeaveType.permission:
+      return 'Permission';
   }
 }
 
@@ -77,6 +78,8 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
   bool _isSingleDay = true;
   bool _isSubmitted = false;
   String? _submittedLeaveId;
+  DateTime? _compensatoryDate;
+  double _permissionHours = 2.0;
 
   @override
   void dispose() {
@@ -84,20 +87,13 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
     super.dispose();
   }
 
-  bool get _isHalfDay => _durationType != LeaveDurationType.fullDay;
+  bool get _isHalfDay => _durationType == LeaveDurationType.halfDay;
 
-  HalfDayType? get _halfDayType {
-    switch (_durationType) {
-      case LeaveDurationType.firstHalf:
-        return HalfDayType.firstHalf;
-      case LeaveDurationType.secondHalf:
-        return HalfDayType.secondHalf;
-      case LeaveDurationType.fullDay:
-        return null;
-    }
-  }
+  bool get _isPermission => _selectedType == LeaveType.permission;
 
-  bool get _showSingleDatePicker => _isHalfDay || _isSingleDay;
+  bool get _isCompensatory => _selectedType == LeaveType.compensatory;
+
+  bool get _showSingleDatePicker => _isHalfDay || _isSingleDay || _isPermission;
 
   Future<void> _selectDate(BuildContext context, bool isFromDate) async {
     final initialDate = isFromDate ? _fromDate : _toDate;
@@ -150,8 +146,9 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
             fromDate: _fromDate,
             toDate: _showSingleDatePicker ? _fromDate : _toDate,
             isHalfDay: _isHalfDay,
-            halfDayType: _halfDayType,
             reason: _reasonController.text.trim(),
+            compensatoryDate: _isCompensatory ? _compensatoryDate : null,
+            permissionHours: _isPermission ? _permissionHours : null,
           );
 
       if (mounted) {
@@ -162,6 +159,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
           _submittedLeaveId = leave.id;
         });
         context.showSnackBar('Leave request submitted successfully!');
+        DynamicIslandManager().show(context, message: 'Leave request submitted');
       }
     } catch (e) {
       if (mounted) {
@@ -184,7 +182,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
     final user = ref.watch(currentUserProvider);
 
     return SafeScaffold(
-      backgroundColor: AppColors.grey50,
+      backgroundColor: context.scaffoldBg,
       appBar: AdaptiveAppBar(
         title: 'Apply Leave',
       ),
@@ -311,64 +309,199 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
                     ),
                   ),
 
-                  // Duration Type Section
-                  _buildSectionCard(
-                    title: 'Duration Type',
-                    child: Row(
-                      children: LeaveDurationType.values.map((type) {
-                        final isSelected = type == _durationType;
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _durationType = type;
-                                if (type != LeaveDurationType.fullDay) {
-                                  _toDate = _fromDate;
-                                  _isSingleDay = true;
-                                }
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              margin: EdgeInsets.only(
-                                right: type != LeaveDurationType.secondHalf ? 8 : 0,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primary.withOpacity(0.1)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? AppColors.primary : AppColors.grey300,
-                                  width: isSelected ? 2 : 1,
+                  // Duration Type Section (hidden for Permission type)
+                  if (!_isPermission)
+                    _buildSectionCard(
+                      title: 'Duration Type',
+                      child: Row(
+                        children: LeaveDurationType.values.map((type) {
+                          final isSelected = type == _durationType;
+                          final isLast = type == LeaveDurationType.values.last;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _durationType = type;
+                                  if (type == LeaveDurationType.halfDay) {
+                                    _toDate = _fromDate;
+                                    _isSingleDay = true;
+                                  }
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: EdgeInsets.only(
+                                  right: isLast ? 0 : 8,
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withOpacity(0.1)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : AppColors.grey300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      type.icon,
+                                      color: isSelected ? AppColors.primary : AppColors.grey500,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      type.displayName,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        color: isSelected ? AppColors.primary : AppColors.grey700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Column(
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
+                  // Compensatory Date Section (only for Compensatory leave)
+                  if (_isCompensatory)
+                    _buildSectionCard(
+                      title: 'Compensatory Date',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select the date you worked extra to compensate',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: AppColors.grey500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _compensatoryDate ?? DateTime.now().subtract(const Duration(days: 1)),
+                                firstDate: DateTime.now().subtract(const Duration(days: 90)),
+                                lastDate: DateTime.now(),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: Theme.of(context).copyWith(
+                                      colorScheme: const ColorScheme.light(
+                                        primary: AppColors.primary,
+                                        onPrimary: Colors.white,
+                                        surface: Colors.white,
+                                        onSurface: AppColors.grey800,
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (picked != null) {
+                                setState(() => _compensatoryDate = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: _compensatoryDate != null ? AppColors.primary : AppColors.grey300,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
                                 children: [
                                   Icon(
-                                    type.icon,
-                                    color: isSelected ? AppColors.primary : AppColors.grey500,
-                                    size: 24,
+                                    Icons.calendar_today_outlined,
+                                    size: 18,
+                                    color: _compensatoryDate != null ? AppColors.primary : AppColors.grey500,
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    type.displayName,
-                                    textAlign: TextAlign.center,
+                                    _compensatoryDate != null
+                                        ? DateFormat('dd MMM, yyyy').format(_compensatoryDate!)
+                                        : 'Select compensatory date',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                      color: isSelected ? AppColors.primary : AppColors.grey700,
+                                      fontSize: 14,
+                                      fontWeight: _compensatoryDate != null ? FontWeight.w600 : FontWeight.normal,
+                                      color: _compensatoryDate != null ? AppColors.grey800 : AppColors.grey400,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        );
-                      }).toList(),
+                        ],
+                      ),
                     ),
-                  ),
+
+                  // Permission Hours Section (only for Permission type)
+                  if (_isPermission)
+                    _buildSectionCard(
+                      title: 'Permission Hours',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select the number of hours for permission',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: AppColors.grey500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [1.0, 2.0, 3.0, 4.0].map((hours) {
+                              final isSelected = _permissionHours == hours;
+                              return GestureDetector(
+                                onTap: () => setState(() => _permissionHours = hours),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.primary : Colors.white,
+                                    borderRadius: BorderRadius.circular(25),
+                                    border: Border.all(
+                                      color: isSelected ? AppColors.primary : AppColors.grey300,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.primary.withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Text(
+                                    '${hours.toInt()} hr${hours > 1 ? 's' : ''}',
+                                    style: GoogleFonts.poppins(
+                                      color: isSelected ? Colors.white : AppColors.grey700,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Date Selection Section
                   _buildSectionCard(
@@ -430,9 +563,11 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  _isHalfDay
-                                      ? 'Half day leave (${_durationType.displayName})'
-                                      : 'Total: ${_toDate.difference(_fromDate).inDays + 1} day(s)',
+                                  _isPermission
+                                      ? 'Permission for ${_permissionHours.toInt()} hour(s)'
+                                      : _isHalfDay
+                                          ? 'Half day leave'
+                                          : 'Total: ${_toDate.difference(_fromDate).inDays + 1} day(s)',
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     color: AppColors.info,
@@ -674,26 +809,18 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
   }
 
   Widget _buildSectionCard({required String title, required Widget child}) {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.fromLTRB(
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
         Responsive.horizontalPadding,
         0,
         Responsive.horizontalPadding,
         Responsive.horizontalPadding,
       ),
-      padding: EdgeInsets.all(Responsive.horizontalPadding),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Responsive.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      child: GlassCard(
+        blur: 12,
+        opacity: 0.15,
+        borderRadius: Responsive.cardRadius,
+        padding: EdgeInsets.all(Responsive.horizontalPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -708,6 +835,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
           SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
           child,
         ],
+      ),
       ),
     );
   }

@@ -53,6 +53,8 @@ class StorageUsageChart extends StatelessWidget {
                   gridData: FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOutCubic,
               ),
             ),
           ],

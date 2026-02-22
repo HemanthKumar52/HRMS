@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/responsive.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/dynamic_island_notification.dart';
 import '../providers/claim_provider.dart';
 
 class CreateClaimScreen extends ConsumerStatefulWidget {
@@ -242,7 +245,7 @@ class _CreateClaimScreenState extends ConsumerState<CreateClaimScreen> {
     final isLoading = ref.watch(createClaimProvider).isLoading;
 
     return SafeScaffold(
-      backgroundColor: AppColors.grey50,
+      backgroundColor: context.scaffoldBg,
       appBar: AdaptiveAppBar(
         title: 'Submit Expense',
       ),
@@ -255,19 +258,11 @@ class _CreateClaimScreenState extends ConsumerState<CreateClaimScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Main Form Card
-                Container(
+                GlassCard(
+                  blur: 12,
+                  opacity: 0.15,
+                  borderRadius: 16,
                   padding: EdgeInsets.all(Responsive.value(mobile: 16.0, tablet: 24.0)),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -393,19 +388,11 @@ class _CreateClaimScreenState extends ConsumerState<CreateClaimScreen> {
                 SizedBox(height: Responsive.horizontalPadding),
 
                 // Attachment Section (Required)
-                Container(
+                GlassCard(
+                  blur: 12,
+                  opacity: 0.15,
+                  borderRadius: 16,
                   padding: EdgeInsets.all(Responsive.value(mobile: 16.0, tablet: 24.0)),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(Responsive.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -630,21 +617,7 @@ class _CreateClaimScreenState extends ConsumerState<CreateClaimScreen> {
                               });
 
                               if (context.mounted && !ref.read(createClaimProvider).hasError) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        const Icon(Icons.check_circle, color: Colors.white),
-                                        SizedBox(width: Responsive.value(mobile: 8.0, tablet: 12.0)),
-                                        Text(
-                                          'Expense submitted successfully',
-                                          style: GoogleFonts.poppins(),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
+                                DynamicIslandManager().show(context, message: 'Expense claim submitted');
                                 context.pop();
                               }
                             }

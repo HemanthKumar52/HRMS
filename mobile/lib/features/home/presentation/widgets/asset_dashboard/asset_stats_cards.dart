@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class AssetStatsCards extends StatelessWidget {
   const AssetStatsCards({super.key});
@@ -20,13 +21,11 @@ class AssetStatsCards extends StatelessWidget {
 
   Widget _buildCard(String label, String value, String trend, Color color) {
     final isNegative = trend.contains('-');
-    return Container(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -42,6 +42,8 @@ class HrCostBreakdownChart extends StatelessWidget {
                         PieChartSectionData(color: Colors.transparent, value: 80, radius: 15, showTitle: false), // Transparent bottom
                       ],
                     ),
+                    swapAnimationDuration: const Duration(milliseconds: 800),
+                    swapAnimationCurve: Curves.easeInOutCubic,
                   ),
                   const Positioned(
                     top: 50,

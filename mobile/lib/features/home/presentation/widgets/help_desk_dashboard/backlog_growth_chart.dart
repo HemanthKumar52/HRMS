@@ -60,6 +60,8 @@ class BacklogGrowthChart extends StatelessWidget {
                     _barGroup(6, 560),
                   ],
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOutCubic,
               ),
             ),
             const SizedBox(height: 8),

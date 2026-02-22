@@ -3,21 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class LeaveDetailsCard extends StatelessWidget {
   const LeaveDetailsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.grey200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
+      padding: const EdgeInsets.all(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
              Row(
@@ -28,21 +27,22 @@ class LeaveDetailsCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    color: context.textPrimary,
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.grey300),
+                    border: Border.all(color: context.borderColor),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 14, color: AppColors.grey600),
+                      Icon(Icons.calendar_today, size: 14, color: context.textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         '2025',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+                        style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
                       ),
                     ],
                   ),
@@ -57,20 +57,20 @@ class LeaveDetailsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLegendItem(AppColors.primaryDark, '1254 On Leave'),
-                      _buildLegendItem(AppColors.success, '32 Late Attendance'),
-                      _buildLegendItem(Colors.orange, '658 Work From Home'),
-                      _buildLegendItem(Colors.red, '14 Absent'),
-                      _buildLegendItem(Colors.yellow, '60 Sick Leave'),
+                      _buildLegendItem(context, AppColors.primaryDark, '1254 On Leave'),
+                      _buildLegendItem(context, AppColors.success, '32 Late Attendance'),
+                      _buildLegendItem(context, Colors.orange, '658 Work From Home'),
+                      _buildLegendItem(context, Colors.red, '14 Absent'),
+                      _buildLegendItem(context, Colors.yellow, '60 Sick Leave'),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.check_box, size: 16, color: Colors.orange),
+                          const Icon(Icons.check_box, size: 16, color: Colors.orange),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               'Better than 85% of Employees',
-                              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+                              style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
                             ),
                           ),
                         ],
@@ -119,6 +119,8 @@ class LeaveDetailsCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      swapAnimationDuration: const Duration(milliseconds: 800),
+                      swapAnimationCurve: Curves.easeInOutCubic,
                     ),
                   ),
                 ),
@@ -126,11 +128,10 @@ class LeaveDetailsCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 
-  Widget _buildLegendItem(Color color, String text) {
+  Widget _buildLegendItem(BuildContext context, Color color, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -146,7 +147,7 @@ class LeaveDetailsCard extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             text,
-            style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey700),
+            style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
           ),
         ],
       ),

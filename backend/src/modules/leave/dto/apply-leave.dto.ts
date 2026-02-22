@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsBoolean,
   IsString,
+  IsNumber,
 } from 'class-validator';
 import { LeaveType, HalfDayType } from '@prisma/client';
 
@@ -32,4 +33,12 @@ export class ApplyLeaveDto {
   @IsNotEmpty({ message: 'Reason is required' })
   @IsString()
   reason: string;
+
+  @IsOptional()
+  @IsDateString()
+  compensatoryDate?: string;
+
+  @IsOptional()
+  @IsNumber()
+  permissionHours?: number;
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
+import '../../../../../core/widgets/glass_card.dart';
 
 class FinanceStatsCards extends StatelessWidget {
   const FinanceStatsCards({super.key});
@@ -9,27 +10,25 @@ class FinanceStatsCards extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildBudgetCard(),
+        _buildBudgetCard(context),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildSmallStatCard('Total Payroll', '\$2,458,900', Colors.green, Icons.monetization_on)),
+            Expanded(child: _buildSmallStatCard(context, 'Total Payroll', '\$2,458,900', Colors.green, Icons.monetization_on)),
             const SizedBox(width: 16),
-            Expanded(child: _buildSmallStatCard('Reimbursement', '\$124,200', Colors.red, Icons.receipt)),
+            Expanded(child: _buildSmallStatCard(context, 'Reimbursement', '\$124,200', Colors.red, Icons.receipt)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildBudgetCard() {
-    return Container(
+  Widget _buildBudgetCard(BuildContext context) {
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,17 +37,17 @@ class FinanceStatsCards extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), shape: BoxShape.circle),
                 child: const Icon(Icons.account_balance_wallet, color: Colors.orange, size: 20),
               ),
-              const Icon(Icons.north_east, color: AppColors.grey400, size: 16),
+              Icon(Icons.north_east, color: context.textTertiary, size: 16),
             ],
           ),
           const SizedBox(height: 16),
-          Text('Budget Remaining', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
+          Text('Budget Remaining', style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
           Row(
             children: [
-              Text('\$2,458,900', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.grey900)),
+              Text('\$2,458,900', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: context.textPrimary)),
               const SizedBox(width: 8),
               const Icon(Icons.check_circle, color: Colors.green, size: 16),
             ],
@@ -61,7 +60,7 @@ class FinanceStatsCards extends StatelessWidget {
               children: [
                 Expanded(flex: 50, child: Container(height: 8, color: Colors.orange)),
                 Expanded(flex: 20, child: Container(height: 8, color: const Color(0xFF004D40))),
-                Expanded(flex: 30, child: Container(height: 8, color: Colors.black87)),
+                Expanded(flex: 30, child: Container(height: 8, color: context.isDark ? Colors.white70 : Colors.black87)),
               ],
             ),
           ),
@@ -69,9 +68,9 @@ class FinanceStatsCards extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _legend('Salary Budget', Colors.orange),
-              _legend('Benefits', const Color(0xFF004D40)),
-              _legend('HR Ops', Colors.black87),
+              _legend(context, 'Salary Budget', Colors.orange),
+              _legend(context, 'Benefits', const Color(0xFF004D40)),
+              _legend(context, 'HR Ops', context.isDark ? Colors.white70 : Colors.black87),
             ],
           ),
         ],
@@ -79,24 +78,22 @@ class FinanceStatsCards extends StatelessWidget {
     );
   }
 
-  Widget _legend(String label, Color color) {
+  Widget _legend(BuildContext context, String label, Color color) {
     return Row(
       children: [
         Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
-        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: AppColors.grey500)),
+        Text(label, style: GoogleFonts.poppins(fontSize: 10, color: context.textSecondary)),
       ],
     );
   }
 
-  Widget _buildSmallStatCard(String label, String value, Color color, IconData icon) {
-    return Container(
+  Widget _buildSmallStatCard(BuildContext context, String label, String value, Color color, IconData icon) {
+    return GlassCard(
+      blur: 12,
+      opacity: 0.15,
+      borderRadius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -112,10 +109,10 @@ class FinanceStatsCards extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(label, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600)),
+          Text(label, style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary)),
           Row(
             children: [
-              Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: context.textPrimary)),
               const SizedBox(width: 4),
               Icon(Icons.check_circle, size: 14, color: color),
             ],
@@ -123,12 +120,12 @@ class FinanceStatsCards extends StatelessWidget {
           const SizedBox(height: 8),
           // Bar code effect
           Row(
-             children: List.generate(20, (index) => 
+             children: List.generate(20, (index) =>
                 Container(
                   margin: const EdgeInsets.only(right: 2),
-                  width: 2, 
-                  height: 10 + (index % 3) * 5.0, 
-                  color: index < 10 ? color.withOpacity(0.5) : AppColors.grey200
+                  width: 2,
+                  height: 10 + (index % 3) * 5.0,
+                  color: index < 10 ? color.withValues(alpha: 0.5) : context.borderColor
                 )
              ),
           ),

@@ -52,6 +52,8 @@ class TicketsByCategoryChart extends StatelessWidget {
                          PieChartSectionData(color: Colors.transparent, value: 100, showTitle: false, radius: 25), // Bottom half
                        ],
                      ),
+                     swapAnimationDuration: const Duration(milliseconds: 800),
+                     swapAnimationCurve: Curves.easeInOutCubic,
                    ),
                    const Padding(
                      padding: EdgeInsets.only(bottom: 20),

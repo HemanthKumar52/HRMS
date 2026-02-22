@@ -52,6 +52,7 @@ class PunchNotifier extends StateNotifier<AsyncValue<PunchResult>> {
         latitude: latitude,
         longitude: longitude,
         address: address,
+        workMode: workMode,
         isOffline: false,
         timestamp: DateTime.now(),
       );

@@ -26,6 +26,7 @@ model User {
   lastName       String
   phone          String?
   avatarUrl      String?
+  facePhoto      String?        @db.Text @map("face_photo")
   role           Role           @default(EMPLOYEE)
   workMode       WorkMode       @default(OFFICE) @map("work_mode")
   organizationId String
@@ -44,6 +45,8 @@ model User {
   notifications        Notification[]
   tickets              Ticket[]
   claims               Claim[]
+  timesheets           Timesheet[]
+  shiftRequests        ShiftRequest[]
   refreshTokens  RefreshToken[]
   isActive       Boolean        @default(true)
   createdAt      DateTime       @default(now())
@@ -80,21 +83,23 @@ model RefreshToken {
 }
 
 model Leave {
-  id          String      @id @default(uuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id])
-  type        LeaveType
-  status      LeaveStatus @default(PENDING)
-  fromDate    DateTime
-  toDate      DateTime
-  isHalfDay   Boolean     @default(false)
-  halfDayType HalfDayType?
-  reason      String?
-  rejectReason String?
-  approvedBy  String?
-  approvedAt  DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id               String      @id @default(uuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  type             LeaveType
+  status           LeaveStatus @default(PENDING)
+  fromDate         DateTime
+  toDate           DateTime
+  isHalfDay        Boolean     @default(false)
+  halfDayType      HalfDayType?
+  reason           String?
+  rejectReason     String?
+  compensatoryDate DateTime?   @map("compensatory_date")
+  permissionHours  Float?      @map("permission_hours")
+  approvedBy       String?
+  approvedAt       DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@map("leaves")
 }
@@ -107,6 +112,7 @@ enum LeaveType {
   PARENTAL
   OD
   COMPENSATORY
+  PERMISSION
 }
 
 enum LeaveStatus {
@@ -359,4 +365,95 @@ enum ClaimStatus {
   PAID
 }
 
+// --- TIMESHEET MANAGEMENT ---
 
+model Timesheet {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  user        User             @relation(fields: [userId], references: [id])
+  weekStart   DateTime         @map("week_start") @db.Date
+  weekEnd     DateTime         @map("week_end") @db.Date
+  status      TimesheetStatus  @default(DRAFT)
+  totalHours  String?          @default("00:00") @map("total_hours")
+  submittedAt DateTime?        @map("submitted_at")
+  approvedBy  String?          @map("approved_by")
+  approvedAt  DateTime?        @map("approved_at")
+  entries     TimesheetEntry[]
+  tasks       TimesheetTask[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, weekStart])
+  @@map("timesheets")
+}
+
+model TimesheetTask {
+  id           String    @id @default(uuid())
+  timesheetId  String    @map("timesheet_id")
+  timesheet    Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  project      String
+  activity     String
+  description  String?
+  workLocation String?   @map("work_location")
+  monHours     String    @default("00:00") @map("mon_hours")
+  tueHours     String    @default("00:00") @map("tue_hours")
+  wedHours     String    @default("00:00") @map("wed_hours")
+  thuHours     String    @default("00:00") @map("thu_hours")
+  friHours     String    @default("00:00") @map("fri_hours")
+  satHours     String    @default("00:00") @map("sat_hours")
+  sunHours     String    @default("00:00") @map("sun_hours")
+  totalHours   String    @default("00:00") @map("total_hours")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("timesheet_tasks")
+}
+
+model TimesheetEntry {
+  id           String    @id @default(uuid())
+  timesheetId  String    @map("timesheet_id")
+  timesheet    Timesheet @relation(fields: [timesheetId], references: [id])
+  date         DateTime  @db.Date
+  hoursWorked  String?   @default("00:00") @map("hours_worked")
+  clockIn      DateTime? @map("clock_in")
+  clockOut     DateTime? @map("clock_out")
+  notes        String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([timesheetId, date])
+  @@map("timesheet_entries")
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// --- SHIFT REQUEST MANAGEMENT ---
+
+model ShiftRequest {
+  id           String             @id @default(uuid())
+  userId       String             @map("user_id")
+  user         User               @relation(fields: [userId], references: [id])
+  title        String
+  fromShift    String             @map("from_shift")
+  toShift      String             @map("to_shift")
+  requestDate  DateTime           @map("request_date") @db.Date
+  reason       String?
+  status       ShiftRequestStatus @default(PENDING)
+  approvedBy   String?            @map("approved_by")
+  approvedAt   DateTime?          @map("approved_at")
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@map("shift_requests")
+}
+
+enum ShiftRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}

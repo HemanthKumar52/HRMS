@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme_extensions.dart';
 
 class SkillsCard extends StatelessWidget {
   const SkillsCard({super.key});
@@ -11,7 +12,7 @@ class SkillsCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.grey200),
+        side: BorderSide(color: context.borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -26,22 +27,22 @@ class SkillsCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.grey300),
+                    border: Border.all(color: context.borderColor),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 14, color: AppColors.grey600),
+                      Icon(Icons.calendar_today, size: 14, color: context.textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         '2025',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey600),
+                        style: GoogleFonts.poppins(fontSize: 12, color: context.textSecondary),
                       ),
                     ],
                   ),
@@ -49,26 +50,31 @@ class SkillsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            _buildSkillItem('Figma', 'Updated : 15 May 2025', 0.35, Colors.orange),
-            _buildSkillItem('HTML', 'Updated : 12 May 2025', 0.35, AppColors.success),
-            _buildSkillItem('CSS', 'Updated : 12 May 2025', 0.70, Colors.purple),
-            _buildSkillItem('WordPress', 'Updated : 15 May 2025', 0.51, Colors.blue),
-            _buildSkillItem('Javascript', 'Updated : 13 May 2025', 0.50, AppColors.primary),
+            _buildSkillItem(context, 'Figma', 'Updated : 15 May 2025', 0.35, Colors.orange, 0),
+            _buildSkillItem(context, 'HTML', 'Updated : 12 May 2025', 0.35, AppColors.success, 1),
+            _buildSkillItem(context, 'CSS', 'Updated : 12 May 2025', 0.70, Colors.purple, 2),
+            _buildSkillItem(context, 'WordPress', 'Updated : 15 May 2025', 0.51, Colors.blue, 3),
+            _buildSkillItem(context, 'Javascript', 'Updated : 13 May 2025', 0.50, AppColors.primary, 4),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSkillItem(String name, String date, double percentage, Color color) {
+  Widget _buildSkillItem(BuildContext context, String name, String date, double percentage, Color color, int index) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          Container(
-            width: 3,
-            height: 40,
-            color: color,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 40.0),
+            duration: Duration(milliseconds: 600 + index * 100),
+            curve: Curves.easeOutCubic,
+            builder: (context, height, _) => Container(
+              width: 3,
+              height: height,
+              color: color,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -80,14 +86,14 @@ class SkillsCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.grey900,
+                    color: context.textPrimary,
                   ),
                 ),
                 Text(
                   date,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: AppColors.grey500,
+                    color: context.textSecondary,
                   ),
                 ),
               ],
@@ -96,27 +102,32 @@ class SkillsCard extends StatelessWidget {
           SizedBox(
             width: 40,
             height: 40,
-            child: Stack(
-              children: [
-                Center(
-                  child: Text(
-                    '${(percentage * 100).toInt()}%',
-                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Center(
-                  child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(
-                      value: percentage,
-                      strokeWidth: 3,
-                      backgroundColor: AppColors.grey200,
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: percentage),
+              duration: Duration(milliseconds: 800 + index * 150),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      '${(value * 100).toInt()}%',
+                      style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: context.textPrimary),
                     ),
                   ),
-                ),
-              ],
+                  Center(
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(
+                        value: value,
+                        strokeWidth: 3,
+                        backgroundColor: context.borderColor,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme_extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import 'widgets/it_admin_dashboard/system_uptime_card.dart';
 import 'widgets/it_admin_dashboard/storage_usage_chart.dart';
 import 'widgets/it_admin_dashboard/peak_hours_card.dart';
@@ -15,16 +17,11 @@ class ItAdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeScaffold(
       drawer: const DashboardDrawer(),
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: Text(
-          'IT Admin Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.grey900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: context.scaffoldBg,
+      appBar: AdaptiveAppBar(
+        title: 'IT Admin Dashboard',
         actions: [
           _buildStatusChip('Active Users', '248', Colors.green),
           const SizedBox(width: 8),
@@ -111,6 +108,7 @@ class ItAdminDashboardScreen extends StatelessWidget {
                  );
                }
              }).animate().fadeIn(delay: 400.ms),
+            const SizedBox(height: 80),
           ],
         ),
       ),

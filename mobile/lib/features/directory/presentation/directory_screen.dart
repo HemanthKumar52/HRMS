@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
+import '../../../core/widgets/safe_scaffold.dart';
 import '../../../shared/models/user_model.dart';
 import '../providers/directory_provider.dart';
 
@@ -58,9 +59,9 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Directory'),
+    return SafeScaffold(
+      appBar: AdaptiveAppBar(
+        title: 'Directory',
       ),
       body: Column(
         children: [
@@ -97,7 +98,7 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
                     ref.invalidate(usersProvider);
                   },
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 80),
                     itemCount: users.length,
                     itemBuilder: (context, index) {
                       return _EmployeeCard(
