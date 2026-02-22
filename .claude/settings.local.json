@@ -22,7 +22,17 @@
       "Bash(xargs:*)",
       "Bash(npx prisma migrate dev:*)",
       "Bash(dart run:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(gh api:*)",
+      "Bash(where:*)",
+      "Bash(python3:*)",
+      "Bash(python -c:*)",
+      "Bash(for repo in Basic-Chatbot Chennai-Electricity-Analytics-2025-2030 Library_management_System Palladium-Resource-Analysis Starlink_Market_Share_Analysis)",
+      "Bash(do echo \"=== $repo ===\")",
+      "Bash(done)",
+      "Bash(git ls-remote:*)",
+      "Bash(git clone:*)",
+      "Bash(npm run seed:*)"
     ]
   }
 }

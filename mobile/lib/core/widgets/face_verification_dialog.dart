@@ -252,52 +252,52 @@ class _FaceVerificationDialogState
         return;
       }
 
-      // ── Step 2: Fetch stored reference face from backend ──
+      // ── Step 2: Fetch ALL employee face photos from backend ──
       final backendDio = ref.read(dioProvider);
-      final faceResponse = await backendDio.get(ApiConstants.userFacePhoto);
+      final facePhotosResponse = await backendDio.get(ApiConstants.userFacePhotos);
 
       if (!mounted) return;
 
-      final storedFacePhoto = faceResponse.data?['facePhoto'] as String?;
+      final employees = facePhotosResponse.data?['employees'] as List? ?? [];
 
-      if (storedFacePhoto == null || storedFacePhoto.isEmpty) {
-        // No stored face — skip identity check (legacy user / first time)
+      if (employees.isEmpty) {
+        // No face photos in DB — skip identity check
         _onVerificationSuccess();
         return;
       }
 
-      // ── Step 3: Compare captured face against stored face ──
-      // Use the last captured frame for comparison
+      // ── Step 3: Classify captured face against ALL employee faces in DB ──
       final lastFrame = _frameBuffer.last;
 
-      final compareResponse = await blinkDio.post(
-        '/compare_face',
+      final classifyResponse = await blinkDio.post(
+        '/classify_face',
         data: {
           'captured_frame': lastFrame,
-          'reference_face': storedFacePhoto,
+          'employees': employees,
         },
       );
 
       if (!mounted) return;
 
-      if (compareResponse.statusCode == 200 && compareResponse.data != null) {
-        final compareData = compareResponse.data;
-        final isMatch = compareData['match'] as bool? ?? false;
-        final confidence = compareData['confidence'] as num? ?? 0.0;
+      if (classifyResponse.statusCode == 200 && classifyResponse.data != null) {
+        final classifyData = classifyResponse.data;
+        final isMatched = classifyData['matched'] as bool? ?? false;
+        final matchedName = classifyData['employee_name'] as String?;
+        final confidence = classifyData['confidence'] as num? ?? 0.0;
 
-        if (isMatch) {
-          debugPrint('Face match confirmed with ${(confidence * 100).toStringAsFixed(1)}% confidence');
+        if (isMatched) {
+          debugPrint('Face classified as $matchedName with ${(confidence * 100).toStringAsFixed(1)}% confidence');
           _onVerificationSuccess();
         } else {
           setState(() {
             _phase = _VerificationPhase.failed;
-            _failureMessage = 'Face does not match registered photo. Please try again or contact your manager.';
+            _failureMessage = 'Person not in the database. Your face does not match any registered employee.';
           });
         }
       } else {
         setState(() {
           _phase = _VerificationPhase.failed;
-          _failureMessage = 'Face comparison server error. Please try again.';
+          _failureMessage = 'Face classification server error. Please try again.';
         });
       }
     } on DioException catch (e) {

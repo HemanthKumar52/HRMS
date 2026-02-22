@@ -142,6 +142,30 @@ export class UsersService {
     });
   }
 
+  async getAllFacePhotos(organizationId: string) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        organizationId,
+        isActive: true,
+        facePhoto: { not: null },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        facePhoto: true,
+      },
+    });
+
+    return {
+      employees: users.map((u) => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`,
+        facePhoto: u.facePhoto,
+      })),
+    };
+  }
+
   async getFacePhoto(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

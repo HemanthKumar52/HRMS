@@ -47,6 +47,11 @@ export class UsersController {
     return this.usersService.getFacePhoto(user.userId);
   }
 
+  @Get('face-photos')
+  async getAllFacePhotos(@CurrentUser() user: CurrentUserPayload) {
+    return this.usersService.getAllFacePhotos(user.organizationId);
+  }
+
   @Get(':id')
   async findById(
     @CurrentUser() user: CurrentUserPayload,

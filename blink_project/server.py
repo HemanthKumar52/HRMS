@@ -8,10 +8,11 @@ import json
 from server_classification import classify_frames, detect_spectacles_in_frame
 try:
     from face_comparison import compare_faces
+    from face_classifier import classify_face
     FACE_RECOGNITION_AVAILABLE = True
 except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
-    print("WARNING: face_recognition library not found. /compare_face endpoint will be disabled.")
+    print("WARNING: face_recognition library not found. /compare_face and /classify_face endpoints will be disabled.")
 
 app = Flask(__name__)
 
@@ -215,6 +216,78 @@ def compare_face_endpoint():
     except Exception as e:
         print(f"Compare face error: {e}")
         return jsonify({"match": False, "confidence": 0.0, "error": str(e)})
+
+
+@app.route('/classify_face', methods=['POST'])
+def classify_face_endpoint():
+    """
+    Classify a captured face against all known employee faces in the database.
+    Expects JSON:
+      {
+        "captured_frame": "data:image/jpeg;base64,...",
+        "employees": [
+          { "id": "uuid", "name": "John Doe", "facePhoto": "<base64>" },
+          ...
+        ]
+      }
+    Returns:
+      {
+        "matched": true/false,
+        "employee_id": "uuid" or null,
+        "employee_name": "John Doe" or null,
+        "confidence": 0.92,
+        "error": null
+      }
+    """
+    try:
+        if not FACE_RECOGNITION_AVAILABLE:
+            return jsonify({
+                "matched": False,
+                "employee_id": None,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "Face recognition library is not installed on the server."
+            })
+
+        data = request.get_json()
+        captured_frame = data.get("captured_frame", "")
+        employees = data.get("employees", [])
+
+        if not captured_frame:
+            return jsonify({
+                "matched": False,
+                "employee_id": None,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "Missing captured_frame"
+            })
+
+        if not employees:
+            return jsonify({
+                "matched": False,
+                "employee_id": None,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "No employee faces provided"
+            })
+
+        print(f"Classifying face against {len(employees)} employees...")
+        result = classify_face(captured_frame, employees)
+        print(f"Classification result: matched={result['matched']}, "
+              f"employee={result.get('employee_name')}, "
+              f"confidence={result['confidence']}")
+
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Classify face error: {e}")
+        return jsonify({
+            "matched": False,
+            "employee_id": None,
+            "employee_name": None,
+            "confidence": 0.0,
+            "error": str(e)
+        })
 
 
 if __name__ == '__main__':

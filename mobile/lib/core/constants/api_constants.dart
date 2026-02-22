@@ -55,6 +55,7 @@ class ApiConstants {
   // Users
   static const String users = '/users';
   static const String userFacePhoto = '/users/me/face-photo';
+  static const String userFacePhotos = '/users/face-photos';
   static String userProfile(String id) => '/users/$id';
   static String userTeam(String id) => '/users/$id/team';
 
