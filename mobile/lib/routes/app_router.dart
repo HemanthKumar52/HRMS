@@ -18,7 +18,6 @@ import '../features/directory/presentation/employee_detail_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/home/presentation/hr_dashboard_screen.dart';
 import '../features/home/presentation/payroll_dashboard_screen.dart';
-import '../features/home/presentation/attendance_dashboard_screen.dart';
 import '../features/home/presentation/it_admin_dashboard_screen.dart';
 import '../features/home/presentation/manager_dashboard_screen.dart';
 import '../features/home/presentation/my_tasks_screen.dart';
@@ -160,11 +159,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/payroll-dashboard',
             name: 'payroll-dashboard',
             builder: (context, state) => const PayrollDashboardScreen(),
-          ),
-          GoRoute(
-            path: '/attendance-dashboard',
-            name: 'attendance-dashboard',
-            builder: (context, state) => const AttendanceDashboardScreen(),
           ),
           GoRoute(
             path: '/it-admin-dashboard',

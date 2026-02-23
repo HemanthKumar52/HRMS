@@ -1,27 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/network/api_client.dart'; // Import secureStorageProvider
-
+import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
-
 import 'package:dio/dio.dart';
-import 'dart:io';
 
 class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   final FlutterSecureStorage _storage;
-  
-  static final String _baseUrl = ApiConstants.baseUrl;
+  final Dio _dio;
 
-
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: _baseUrl,
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
-  
-  AuthNotifier(this._storage) : super(const AsyncValue.data(null)) {
+  AuthNotifier(this._storage)
+      : _dio = Dio(BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        )),
+        super(const AsyncValue.data(null)) {
+    debugPrint('[Auth] Base URL: ${ApiConstants.baseUrl}');
     _loadUser();
   }
 
@@ -29,36 +30,38 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     try {
       final token = await _storage.read(key: AppConstants.accessTokenKey);
       if (token != null) {
-        // Token exists, try to get user profile
         _dio.options.headers['Authorization'] = 'Bearer $token';
-        final response = await _dio.get('/auth/profile');
-        
+        final response = await _dio.get('/auth/me');
+
         if (response.statusCode == 200) {
           final userData = response.data['data'];
           final user = UserModel.fromJson(userData);
           state = AsyncValue.data(user);
+          debugPrint('[Auth] Restored session for ${user.email}');
         }
       }
     } catch (e) {
-      // Token invalid or expired, stay logged out
+      debugPrint('[Auth] _loadUser failed: $e');
       state = const AsyncValue.data(null);
     }
   }
 
   Future<void> login(String email, {String password = 'password123', String? name, String? mockRole}) async {
     state = const AsyncValue.loading();
-    
-    // DEV: Set header for backend role switching
+    debugPrint('[Auth] Logging in $email to ${_dio.options.baseUrl}');
+
     if (mockRole != null) {
       _dio.options.headers['x-mock-role'] = mockRole;
     }
 
     try {
-      // 1. Perform Real API Call
       final response = await _dio.post('/auth/login', data: {
         'email': email,
         'password': password,
       });
+
+      debugPrint('[Auth] Response status: ${response.statusCode}');
+      debugPrint('[Auth] Response data type: ${response.data.runtimeType}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data['data'];
@@ -66,33 +69,34 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
         final accessToken = responseData['accessToken'];
         final refreshToken = responseData['refreshToken'];
 
-        // 2. Save tokens to secure storage
         await _storage.write(key: AppConstants.accessTokenKey, value: accessToken);
         if (refreshToken != null) {
           await _storage.write(key: AppConstants.refreshTokenKey, value: refreshToken);
         }
 
-        // 3. Parse User Data from Backend
         final user = UserModel(
           id: userData['id'],
           email: userData['email'],
           firstName: userData['firstName'],
           lastName: userData['lastName'],
-          role: mockRole ?? userData['role'], // Override role locally
+          role: mockRole ?? userData['role'],
         );
 
         state = AsyncValue.data(user);
+        debugPrint('[Auth] Login success: ${user.email} (${user.role})');
       } else {
+        debugPrint('[Auth] Unexpected status: ${response.statusCode}');
         state = AsyncValue.error('Login failed: ${response.statusMessage}', StackTrace.current);
       }
-    } on DioException catch (e) {
-      String errorMessage = 'Login failed';
-      if (e.response != null) {
-        errorMessage = e.response?.data['message'] ?? e.message;
-      }
-      state = AsyncValue.error(errorMessage, e.stackTrace);
+    } on DioException catch (e, st) {
+      final errorMessage = e.response?.data is Map
+          ? (e.response!.data['message'] ?? 'Login failed').toString()
+          : 'Login failed: ${e.type.name} - ${e.message ?? "connection error"}';
+      debugPrint('[Auth] DioException: ${e.type} | ${e.message} | URL: ${e.requestOptions.uri}');
+      state = AsyncValue.error(errorMessage, st);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      debugPrint('[Auth] Unexpected error: $e');
+      state = AsyncValue.error('Login failed: $e', st);
     }
   }
 

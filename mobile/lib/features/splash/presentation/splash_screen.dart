@@ -56,8 +56,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
           // Not logged in -> go to login
           context.go('/login');
         } else if (workMode == null) {
-          // Logged in but no work mode -> go to work mode selection
-          context.go('/work-mode');
+          // Logged in but no work mode set -> go to home (default work mode is auto-set)
+          context.go('/');
         } else {
           // Logged in with work mode -> go to home
           context.go('/');

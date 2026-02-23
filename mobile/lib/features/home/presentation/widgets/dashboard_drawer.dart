@@ -72,7 +72,7 @@ class DashboardDrawer extends ConsumerWidget {
         _buildDrawerItem(context, icon: Icons.analytics_outlined, label: 'Reports', route: '/hr-dashboard', isSelected: currentRoute == '/hr-dashboard'),
         const Divider(),
          _buildSectionHeader(context, 'Personal'),
-        _buildDrawerItem(context, icon: Icons.timer_outlined, label: 'My Attendance', route: '/attendance-dashboard', isSelected: currentRoute == '/attendance-dashboard'),
+        _buildDrawerItem(context, icon: Icons.timer_outlined, label: 'My Attendance', route: '/attendance', isSelected: currentRoute == '/attendance'),
         _buildDrawerItem(context, icon: Icons.calendar_today_outlined, label: 'My Leave', route: '/leave-dashboard', isSelected: currentRoute == '/leave-dashboard'),
       ];
     } else if (role == 'MANAGER') {
@@ -83,7 +83,7 @@ class DashboardDrawer extends ConsumerWidget {
         _buildDrawerItem(context, icon: Icons.playlist_add_check, label: 'Approvals', route: '/approvals', isSelected: currentRoute == '/approvals'),
         const Divider(),
         _buildSectionHeader(context, 'Personal'),
-        _buildDrawerItem(context, icon: Icons.timer_outlined, label: 'My Attendance', route: '/attendance-dashboard', isSelected: currentRoute == '/attendance-dashboard'),
+        _buildDrawerItem(context, icon: Icons.timer_outlined, label: 'My Attendance', route: '/attendance', isSelected: currentRoute == '/attendance'),
         _buildDrawerItem(context, icon: Icons.calendar_today_outlined, label: 'My Leave', route: '/leave-dashboard', isSelected: currentRoute == '/leave-dashboard'),
       ];
     } else if (role == 'ADMIN') {

@@ -7,12 +7,7 @@ class ApiConstants {
       return 'http://localhost:3000/api/v1';
     }
 
-    if (Platform.isAndroid) {
-      // Use local IP for physical device testing
-      return 'http://192.168.1.4:3000/api/v1';
-    }
-
-    // iOS simulator, Windows, macOS, Linux can use localhost
+    // adb reverse tcp:3000 tcp:3000 enables localhost forwarding from emulator to host
     return 'http://localhost:3000/api/v1';
   }
 
@@ -20,10 +15,6 @@ class ApiConstants {
   static String get blinkServerUrl {
     if (kIsWeb) {
       return 'http://localhost:5000';
-    }
-
-    if (Platform.isAndroid) {
-      return 'http://192.168.1.4:5000';
     }
 
     return 'http://localhost:5000';

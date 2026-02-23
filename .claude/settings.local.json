@@ -32,7 +32,10 @@
       "Bash(done)",
       "Bash(git ls-remote:*)",
       "Bash(git clone:*)",
-      "Bash(npm run seed:*)"
+      "Bash(npm run seed:*)",
+      "Bash(adb reverse:*)",
+      "Bash(adb logcat:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
