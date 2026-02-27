@@ -1,13 +1,17 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTimesheetTaskDto } from './dto/create-timesheet-task.dto';
 
 @Injectable()
 export class TimesheetService {
   private readonly logger = new Logger(TimesheetService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Parse an "HH:MM" string into total minutes.
@@ -229,6 +233,27 @@ export class TimesheetService {
       },
     });
 
+    // Notify the reporting manager
+    const employee = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, managerId: true },
+    });
+
+    if (employee?.managerId) {
+      const weekStartStr = timesheet.weekStart.toISOString().split('T')[0];
+      const weekEndStr = timesheet.weekEnd.toISOString().split('T')[0];
+
+      await this.notificationsService.create({
+        userId: employee.managerId,
+        title: 'Timesheet Submitted',
+        body: `${employee.firstName} ${employee.lastName} has submitted their timesheet for ${weekStartStr} to ${weekEndStr} (${updated.totalHours || '00:00'} hours)`,
+        type: 'TIMESHEET',
+        payload: { timesheetId, employeeId: userId },
+      });
+
+      this.logger.log(`Notified manager ${employee.managerId} about timesheet from ${employee.firstName}`);
+    }
+
     const { wfoHours, wfhHours } = this.computeLocationHours(updated.tasks);
 
     return { ...updated, wfoHours, wfhHours };
@@ -253,6 +278,93 @@ export class TimesheetService {
     });
 
     this.logger.log(`Auto-submitted ${result.count} timesheet(s)`);
+  }
+
+  /**
+   * Daily cron job (9 PM Mon-Sat) that notifies each reporting manager
+   * with a summary of their team's timesheet status for the current week.
+   */
+  @Cron('0 21 * * 1-6')
+  async sendDailyTimesheetReminders() {
+    this.logger.log('Running daily timesheet reminder notifications...');
+
+    // Get current week's Monday
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+
+    // Find all managers who have reports
+    const managers = await this.prisma.user.findMany({
+      where: {
+        reports: { some: {} },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        reports: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    for (const manager of managers) {
+      const reportIds = manager.reports.map((r) => r.id);
+
+      // Get timesheets for all reports for the current week
+      const timesheets = await this.prisma.timesheet.findMany({
+        where: {
+          userId: { in: reportIds },
+          weekStart: monday,
+        },
+        include: {
+          user: { select: { firstName: true, lastName: true } },
+          tasks: true,
+        },
+      });
+
+      const filled = timesheets.filter(
+        (ts) => ts.tasks.length > 0 || ts.totalHours !== '00:00',
+      );
+      const submitted = timesheets.filter((ts) => ts.status === 'SUBMITTED');
+      const pending = timesheets.filter(
+        (ts) => ts.status === 'DRAFT' && (ts.tasks.length === 0 && ts.totalHours === '00:00'),
+      );
+
+      const totalReports = manager.reports.length;
+      const notFilledNames = manager.reports
+        .filter((r) => !timesheets.some((ts) => ts.userId === r.id && (ts.tasks.length > 0 || ts.totalHours !== '00:00')))
+        .map((r) => r.firstName)
+        .join(', ');
+
+      const body = [
+        `Team timesheet summary for ${monday.toISOString().split('T')[0]}:`,
+        `${filled.length}/${totalReports} filled, ${submitted.length} submitted`,
+        notFilledNames ? `Not yet filled: ${notFilledNames}` : 'All team members have filled their timesheets',
+      ].join('\n');
+
+      await this.notificationsService.create({
+        userId: manager.id,
+        title: 'Daily Timesheet Summary',
+        body,
+        type: 'TIMESHEET',
+        payload: {
+          weekStart: monday.toISOString(),
+          filledCount: filled.length,
+          submittedCount: submitted.length,
+          totalReports,
+        },
+      });
+
+      this.logger.log(`Sent daily timesheet summary to manager ${manager.firstName} ${manager.lastName}`);
+    }
   }
 
   async getTimesheetHistory(userId: string, page = 1, limit = 10) {
@@ -292,12 +404,18 @@ export class TimesheetService {
     };
   }
 
-  async getSubmittedTimesheets(page = 1, limit = 20) {
+  async getSubmittedTimesheets(managerId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
+
+    // Only show timesheets from employees who report to this manager
+    const whereClause: any = {
+      status: 'SUBMITTED',
+      user: { managerId },
+    };
 
     const [timesheets, total] = await Promise.all([
       this.prisma.timesheet.findMany({
-        where: { status: 'SUBMITTED' },
+        where: whereClause,
         orderBy: { submittedAt: 'desc' },
         skip,
         take: limit,
@@ -318,7 +436,7 @@ export class TimesheetService {
           },
         },
       }),
-      this.prisma.timesheet.count({ where: { status: 'SUBMITTED' } }),
+      this.prisma.timesheet.count({ where: whereClause }),
     ]);
 
     const timesheetsWithLocation = timesheets.map((ts) => {

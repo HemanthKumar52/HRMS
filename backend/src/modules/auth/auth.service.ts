@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { MicrosoftAuthService } from './strategies/microsoft.strategy';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private microsoftAuthService: MicrosoftAuthService,
   ) { }
 
   async login(loginDto: LoginDto) {
@@ -151,6 +153,52 @@ export class AuthService {
         name: user.organization.name,
       },
       manager: user.manager,
+    };
+  }
+
+  /**
+   * SSO login via Microsoft token.
+   * Validates the Microsoft access token, finds the matching HRMS user,
+   * and generates JWT tokens (skipping password check).
+   */
+  async loginWithMicrosoftToken(microsoftAccessToken: string) {
+    // 1. Validate Microsoft token and get profile
+    const msProfile = await this.microsoftAuthService.validateMicrosoftToken(microsoftAccessToken);
+
+    // 2. Find existing HRMS user by email
+    const user = await this.microsoftAuthService.findUserByEmail(msProfile.email);
+
+    // 3. Generate tokens (same as regular login, but no password check)
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.organizationId,
+    );
+
+    // 4. Save refresh token
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        department: user.department,
+        designation: user.designation,
+        organization: {
+          id: user.organization.id,
+          name: user.organization.name,
+        },
+      },
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      provider: 'microsoft',
     };
   }
 

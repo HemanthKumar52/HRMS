@@ -25,6 +25,8 @@ class ApiConstants {
   static const String refresh = '/auth/refresh';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String ssoToken = '/auth/sso/token';
+  static const String microsoftAuth = '/auth/microsoft';
 
   // Leave
   static const String leaveApply = '/leave/apply';
@@ -42,6 +44,7 @@ class ApiConstants {
   static const String attendanceSummary = '/attendance/summary';
   static const String attendanceHistory = '/attendance/history';
   static const String attendanceSync = '/attendance/sync';
+  static const String attendanceTeamToday = '/attendance/team-today';
 
   // Users
   static const String users = '/users';
@@ -61,6 +64,7 @@ class ApiConstants {
 
   // Shift Requests
   static const String shiftRequests = '/shift-requests';
+  static const String shiftRequestsPending = '/shift-requests/pending';
   static String shiftRequestApprove(String id) => '/shift-requests/$id/approve';
   static String shiftRequestReject(String id) => '/shift-requests/$id/reject';
   static String shiftRequestCancel(String id) => '/shift-requests/$id/cancel';

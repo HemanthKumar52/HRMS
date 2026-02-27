@@ -92,6 +92,30 @@ class AuthRepository {
     return accessToken != null;
   }
 
+  Future<UserModel> loginWithMicrosoftToken(String microsoftToken) async {
+    final response = await _dio.post(
+      '/auth/sso/token',
+      data: {'accessToken': microsoftToken},
+    );
+
+    final data = response.data['data'];
+
+    await _storage.write(
+      key: AppConstants.accessTokenKey,
+      value: data['accessToken'],
+    );
+    await _storage.write(
+      key: AppConstants.refreshTokenKey,
+      value: data['refreshToken'],
+    );
+    await _storage.write(
+      key: AppConstants.userKey,
+      value: jsonEncode(data['user']),
+    );
+
+    return UserModel.fromJson(data['user']);
+  }
+
   Future<UserModel> getProfile() async {
     final response = await _dio.get(ApiConstants.me);
     final user = UserModel.fromJson(response.data['data']);

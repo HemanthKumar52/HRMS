@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/safe_scaffold.dart';
-import 'widgets/attendance_dashboard/employee_attendance_dashboard.dart';
 import 'widgets/dashboard_drawer.dart';
 
 class MyTasksScreen extends StatefulWidget {
@@ -53,10 +52,6 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Attendance Section (Merged)
-            const EmployeeAttendanceDashboard(),
-            const SizedBox(height: 24),
-
             // Projects Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

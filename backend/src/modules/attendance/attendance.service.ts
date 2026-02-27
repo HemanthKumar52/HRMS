@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PunchType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PunchDto } from './dto/punch.dto';
 import { AttendanceHistoryDto } from './dto/attendance-history.dto';
 import { AttendanceSummaryDto } from './dto/attendance-summary.dto';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) { }
 
   async punch(userId: string, dto: PunchDto) {
     const punchTime = dto.timestamp ? new Date(dto.timestamp) : new Date();
@@ -103,6 +107,35 @@ export class AttendanceService {
           totalHours: totalHoursStr,
         },
       });
+    }
+
+    // 5. Notify reporting manager
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, managerId: true },
+    });
+
+    if (user?.managerId) {
+      const actualPunchType = activity.punchType;
+      const timeStr = punchTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const employeeName = `${user.firstName} ${user.lastName}`;
+
+      if (actualPunchType === PunchType.CLOCK_IN) {
+        await this.notificationsService.create({
+          userId: user.managerId,
+          title: 'Employee Clocked In',
+          body: `${employeeName} clocked in at ${timeStr}`,
+          type: 'ATTENDANCE',
+        });
+      } else {
+        const [h, m] = (daily.totalHours || '00:00').split(':').map(Number);
+        await this.notificationsService.create({
+          userId: user.managerId,
+          title: 'Employee Clocked Out',
+          body: `${employeeName} clocked out at ${timeStr}. Total: ${h}h ${m}m`,
+          type: 'ATTENDANCE',
+        });
+      }
     }
 
     return {
@@ -250,6 +283,66 @@ export class AttendanceService {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async getTeamTodayStatus(managerId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const teamMembers = await this.prisma.user.findMany({
+      where: { managerId, isActive: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        designation: true,
+      },
+    });
+
+    const result = await Promise.all(
+      teamMembers.map(async (member) => {
+        const daily = await this.prisma.dailyAttendance.findUnique({
+          where: {
+            userId_date: { userId: member.id, date: today },
+          },
+          include: {
+            activities: { orderBy: { timestamp: 'desc' }, take: 1 },
+          },
+        });
+
+        let status: 'PRESENT' | 'ABSENT' = 'ABSENT';
+        let clockInTime: Date | null = null;
+        let totalHours = '0h 0m';
+
+        if (daily) {
+          status = 'PRESENT';
+          clockInTime = daily.clockInTime;
+          const [h, m] = (daily.totalHours || '00:00').split(':').map(Number);
+          totalHours = `${h}h ${m}m`;
+        }
+
+        return {
+          userId: member.id,
+          name: `${member.firstName} ${member.lastName}`,
+          avatarUrl: member.avatarUrl,
+          designation: member.designation,
+          status,
+          clockInTime,
+          totalHours,
+        };
+      }),
+    );
+
+    const presentCount = result.filter((r) => r.status === 'PRESENT').length;
+    const absentCount = result.filter((r) => r.status === 'ABSENT').length;
+
+    return {
+      total: teamMembers.length,
+      present: presentCount,
+      absent: absentCount,
+      members: result,
     };
   }
 

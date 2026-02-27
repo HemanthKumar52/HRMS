@@ -11,6 +11,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -18,6 +19,8 @@ import { UsersService } from './users.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Controller('users')
 @UseGuards(AuthGuard('jwt'))
@@ -25,6 +28,8 @@ export class UsersController {
   constructor(private usersService: UsersService) { }
 
   @Post()
+  @Roles(Role.MANAGER, Role.HR_ADMIN)
+  @UseGuards(RolesGuard)
   async create(
     @CurrentUser() user: CurrentUserPayload,
     @Body() createUserDto: CreateUserDto,

@@ -42,8 +42,11 @@ export class TimesheetController {
   }
 
   @Get('pending')
-  async getSubmittedTimesheets(@Query() query: TimesheetQueryDto) {
-    return this.timesheetService.getSubmittedTimesheets(query.page, query.limit);
+  async getSubmittedTimesheets(
+    @CurrentUser('userId') userId: string,
+    @Query() query: TimesheetQueryDto,
+  ) {
+    return this.timesheetService.getSubmittedTimesheets(userId, query.page, query.limit);
   }
 
   @Patch(':id/approve')

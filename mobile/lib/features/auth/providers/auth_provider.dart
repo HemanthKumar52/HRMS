@@ -100,6 +100,51 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
     }
   }
 
+  Future<void> loginWithSSO(String microsoftToken) async {
+    state = const AsyncValue.loading();
+    debugPrint('[Auth] SSO login with Microsoft token');
+
+    try {
+      final response = await _dio.post('/auth/sso/token', data: {
+        'accessToken': microsoftToken,
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data['data'];
+        final userData = responseData['user'];
+        final accessToken = responseData['accessToken'];
+        final refreshToken = responseData['refreshToken'];
+
+        await _storage.write(key: AppConstants.accessTokenKey, value: accessToken);
+        if (refreshToken != null) {
+          await _storage.write(key: AppConstants.refreshTokenKey, value: refreshToken);
+        }
+
+        final user = UserModel(
+          id: userData['id'],
+          email: userData['email'],
+          firstName: userData['firstName'],
+          lastName: userData['lastName'],
+          role: userData['role'],
+        );
+
+        state = AsyncValue.data(user);
+        debugPrint('[Auth] SSO login success: ${user.email} (${user.role})');
+      } else {
+        state = AsyncValue.error('SSO login failed: ${response.statusMessage}', StackTrace.current);
+      }
+    } on DioException catch (e, st) {
+      final errorMessage = e.response?.data is Map
+          ? (e.response!.data['message'] ?? 'SSO login failed').toString()
+          : 'SSO login failed: ${e.type.name}';
+      debugPrint('[Auth] SSO DioException: ${e.type} | ${e.message}');
+      state = AsyncValue.error(errorMessage, st);
+    } catch (e, st) {
+      debugPrint('[Auth] SSO unexpected error: $e');
+      state = AsyncValue.error('SSO login failed: $e', st);
+    }
+  }
+
   Future<void> logout() async {
     await _storage.deleteAll();
     state = const AsyncValue.data(null);

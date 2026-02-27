@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
@@ -7,11 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../constants/api_constants.dart';
-import '../network/api_client.dart';
 import '../network/blink_api_client.dart';
 import '../theme/app_colors.dart';
 import 'glass_card.dart';
+
+/// Face verification result returned to the caller
+class FaceVerificationResult {
+  final String? photoPath;
+  final String? employeeName;
+  final double confidence;
+
+  FaceVerificationResult({this.photoPath, this.employeeName, this.confidence = 0.0});
+}
 
 /// Verification phases
 enum _VerificationPhase { welcome, capture, processing, success, failed }
@@ -19,7 +27,7 @@ enum _VerificationPhase { welcome, capture, processing, success, failed }
 /// Dialog that shows camera preview, captures frames, and verifies liveness
 /// via the blink detection Flask server before allowing attendance clock-in.
 class FaceVerificationDialog extends ConsumerStatefulWidget {
-  final Function(String? photoPath) onComplete;
+  final Function(FaceVerificationResult? result) onComplete;
 
   const FaceVerificationDialog({
     super.key,
@@ -60,6 +68,10 @@ class _FaceVerificationDialogState
 
   // Failure message
   String _failureMessage = 'Liveness check failed. No blinks detected.';
+
+  // Matched employee info from face verification
+  String? _matchedEmployeeName;
+  double _matchedConfidence = 0.0;
 
   @override
   void initState() {
@@ -241,8 +253,9 @@ class _FaceVerificationDialogState
       final livenessData = livenessResponse.data;
       final status = livenessData['status'] as String?;
       final blinked = livenessData['blinked'] as int? ?? 0;
+      final liveness = livenessData['liveness'] as bool? ?? false;
 
-      if (status != 'success' || blinked < 1) {
+      if (status != 'success' || blinked < 1 || !liveness) {
         setState(() {
           _phase = _VerificationPhase.failed;
           _failureMessage = blinked == 0
@@ -252,52 +265,31 @@ class _FaceVerificationDialogState
         return;
       }
 
-      // ── Step 2: Fetch ALL employee face photos from backend ──
-      final backendDio = ref.read(dioProvider);
-      final facePhotosResponse = await backendDio.get(ApiConstants.userFacePhotos);
+      // ── Step 2: Check face verification result from blink server ──
+      // The /upload_nodes endpoint already verifies the face against registered employees
+      final verification = livenessData['verification'] as Map<String, dynamic>?;
 
-      if (!mounted) return;
+      if (verification != null) {
+        final isMatched = verification['matched'] as bool? ?? false;
+        final employeeName = verification['employee_name'] as String?;
+        final confidence = (verification['confidence'] as num?)?.toDouble() ?? 0.0;
 
-      final employees = facePhotosResponse.data?['employees'] as List? ?? [];
-
-      if (employees.isEmpty) {
-        // No face photos in DB — skip identity check
-        _onVerificationSuccess();
-        return;
-      }
-
-      // ── Step 3: Classify captured face against ALL employee faces in DB ──
-      final lastFrame = _frameBuffer.last;
-
-      final classifyResponse = await blinkDio.post(
-        '/classify_face',
-        data: {
-          'captured_frame': lastFrame,
-          'employees': employees,
-        },
-      );
-
-      if (!mounted) return;
-
-      if (classifyResponse.statusCode == 200 && classifyResponse.data != null) {
-        final classifyData = classifyResponse.data;
-        final isMatched = classifyData['matched'] as bool? ?? false;
-        final matchedName = classifyData['employee_name'] as String?;
-        final confidence = classifyData['confidence'] as num? ?? 0.0;
-
-        if (isMatched) {
-          debugPrint('Face classified as $matchedName with ${(confidence * 100).toStringAsFixed(1)}% confidence');
+        if (isMatched && employeeName != null) {
+          debugPrint('[FaceVerification] MATCH: $employeeName (${(confidence * 100).toStringAsFixed(1)}%)');
+          _matchedEmployeeName = employeeName;
+          _matchedConfidence = confidence;
           _onVerificationSuccess();
         } else {
+          debugPrint('[FaceVerification] NO MATCH (confidence: ${(confidence * 100).toStringAsFixed(1)}%)');
           setState(() {
             _phase = _VerificationPhase.failed;
-            _failureMessage = 'Person not in the database. Your face does not match any registered employee.';
+            _failureMessage = 'Face not recognized. You are not a registered employee.';
           });
         }
       } else {
         setState(() {
           _phase = _VerificationPhase.failed;
-          _failureMessage = 'Face classification server error. Please try again.';
+          _failureMessage = 'Face verification unavailable. Please try again.';
         });
       }
     } on DioException catch (e) {
@@ -326,9 +318,13 @@ class _FaceVerificationDialogState
     });
 
     // Brief success display, then return result
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
-        widget.onComplete(_lastPhotoPath);
+        widget.onComplete(FaceVerificationResult(
+          photoPath: _lastPhotoPath,
+          employeeName: _matchedEmployeeName,
+          confidence: _matchedConfidence,
+        ));
         Navigator.of(context).pop();
       }
     });
@@ -352,6 +348,11 @@ class _FaceVerificationDialogState
   void _cancelDialog() {
     widget.onComplete(null);
     Navigator.of(context).pop();
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   @override
@@ -427,7 +428,9 @@ class _FaceVerificationDialogState
         break;
       case _VerificationPhase.success:
         headerColor = AppColors.success;
-        headerText = 'Verification Successful';
+        headerText = _matchedEmployeeName != null
+            ? 'Verified: ${_capitalize(_matchedEmployeeName!)}'
+            : 'Verification Successful';
         headerIcon = Icons.check_circle;
         break;
       case _VerificationPhase.failed:
@@ -639,23 +642,68 @@ class _FaceVerificationDialogState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: AppColors.success,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check, color: Colors.white, size: 48),
-            ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+            // Show captured face photo
+            if (_lastPhotoPath != null)
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.success, width: 3),
+                  image: DecorationImage(
+                    image: FileImage(File(_lastPhotoPath!)),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack)
+            else
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppColors.success,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 48),
+              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
             const SizedBox(height: 16),
+            // Show matched employee name
+            if (_matchedEmployeeName != null)
+              Text(
+                'Welcome, ${_capitalize(_matchedEmployeeName!)}!',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).animate().fadeIn(delay: 300.ms)
+            else
+              const Text(
+                'Verified!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ).animate().fadeIn(delay: 300.ms),
+            const SizedBox(height: 8),
+            // Confidence score
+            if (_matchedConfidence > 0)
+              Text(
+                'Confidence: ${(_matchedConfidence * 100).toStringAsFixed(1)}%',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ).animate().fadeIn(delay: 500.ms),
+            const SizedBox(height: 4),
             const Text(
-              'Liveness Verified!',
+              'Attendance Marked: PRESENT',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                color: AppColors.success,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
-            ).animate().fadeIn(delay: 300.ms),
+            ).animate().fadeIn(delay: 600.ms),
           ],
         ),
       ),
@@ -771,12 +819,14 @@ class _FaceVerificationDialogState
         );
 
       case _VerificationPhase.success:
-        return const Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           child: Text(
-            'You are verified!',
+            _matchedEmployeeName != null
+                ? '${_capitalize(_matchedEmployeeName!)} verified successfully!'
+                : 'You are verified!',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.success,
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -888,19 +938,19 @@ class _CornerGuidePainter extends CustomPainter {
 }
 
 /// Show face verification dialog with liveness detection.
-/// Returns the photo path on success, null on cancel/failure.
-Future<String?> showFaceVerificationDialog(BuildContext context) async {
-  String? photoPath;
+/// Returns FaceVerificationResult on success, null on cancel/failure.
+Future<FaceVerificationResult?> showFaceVerificationDialog(BuildContext context) async {
+  FaceVerificationResult? result;
 
   await showDialog(
     context: context,
     barrierDismissible: false,
     builder: (context) => FaceVerificationDialog(
-      onComplete: (path) {
-        photoPath = path;
+      onComplete: (r) {
+        result = r;
       },
     ),
   );
 
-  return photoPath;
+  return result;
 }

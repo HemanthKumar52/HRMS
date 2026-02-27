@@ -68,6 +68,7 @@ enum WorkMode {
   OFFICE       // Biometric + Geofence + Clock In/Out (ALL THREE REQUIRED)
   REMOTE       // Clock In/Out only
   ON_DUTY      // GPS location (lat/long + address) captured on Clock In and Clock Out
+  HYBRID       // Office + Remote combination - flexible schedule
 }
 
 

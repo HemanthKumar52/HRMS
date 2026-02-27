@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/responsive.dart';
 import '../../../shared/providers/login_method_provider.dart';
 import '../providers/auth_provider.dart';
@@ -88,19 +90,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      // SSO placeholder — uses default credentials for demo
-      await ref.read(authStateProvider.notifier).login('hr@acme.com', password: 'password123');
+      // Launch Microsoft OAuth consent page
+      // The backend handles the OAuth flow and returns tokens
+      final authUrl = Uri.parse('${ApiConstants.baseUrl}/auth/microsoft');
 
-      final authState = ref.read(authStateProvider);
-      if (authState is AsyncError) {
-        throw authState.error ?? Exception('Unknown authentication error');
-      }
+      if (await canLaunchUrl(authUrl)) {
+        await launchUrl(authUrl, mode: LaunchMode.externalApplication);
 
-      await ref.read(loginMethodProvider.notifier).setLoginMethod(LoginMethod.password);
+        // After user completes OAuth in browser, they return to the app.
+        // For mobile deep-link flow, the callback URL redirects back with a token.
+        // For now, show a dialog to enter the token received from the callback.
+        if (mounted) {
+          final token = await _showSsoTokenInputDialog();
+          if (token != null && token.isNotEmpty) {
+            await ref.read(authStateProvider.notifier).loginWithSSO(token);
 
-      if (mounted) {
-        DynamicIslandManager().show(context, message: 'Successfully Logged In via Microsoft', isError: false);
-        context.go('/');
+            final authState = ref.read(authStateProvider);
+            if (authState is AsyncError) {
+              throw authState.error ?? Exception('SSO authentication error');
+            }
+
+            await ref.read(loginMethodProvider.notifier).setLoginMethod(LoginMethod.password);
+
+            if (mounted) {
+              DynamicIslandManager().show(context, message: 'Successfully Logged In via Microsoft', isError: false);
+              context.go('/');
+            }
+          }
+        }
+      } else {
+        // Fallback: show token input directly (for environments without browser)
+        if (mounted) {
+          DynamicIslandManager().show(
+            context,
+            message: 'Cannot open browser. Please configure Microsoft SSO.',
+            isError: true,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -115,6 +141,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
       }
     }
+  }
+
+  Future<String?> _showSsoTokenInputDialog() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Microsoft SSO', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'After signing in with Microsoft, paste the token received from the callback.',
+              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.grey600),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Paste Microsoft access token',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            child: const Text('Login'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

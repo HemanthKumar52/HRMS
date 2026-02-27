@@ -32,11 +32,13 @@ class WorkModeNotifier extends StateNotifier<String?> {
   bool get isOfficeMode => state == 'OFFICE';
   bool get isRemoteMode => state == 'REMOTE';
   bool get isOnDutyMode => state == 'ON_DUTY';
-  
+  bool get isHybridMode => state == 'HYBRID';
+
   // Office mode requires ALL THREE: Biometric AND Geofence AND Clock In/Out
+  // Hybrid mode follows the same rules as Office when on-site
   bool get requiresGeofence => isOfficeMode;
   bool get requiresBiometric => isOfficeMode;
-  
+
   // ON_DUTY mode captures GPS location (lat/long + address) on both Clock In and Clock Out
   bool get requiresLocationTracking => isOnDutyMode;
 }

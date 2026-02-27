@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": "2026-02-25T13:07:54.810626",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-25_12-34-44"
+  },
+  {
+    "timestamp": "2026-02-25T13:11:29.300198",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-25_12-34-44"
+  },
+  {
+    "timestamp": "2026-02-25T13:18:13.465537",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-25_12-34-44"
+  },
+  {
+    "timestamp": "2026-02-27T10:08:34.692338",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_10-03-31"
+  }
+]

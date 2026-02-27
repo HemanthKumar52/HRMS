@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
+import '../data/approval_repository.dart';
 
 /// Selected tab index for context-aware FAB behavior
 final selectedRequestTabProvider = StateProvider<int>((ref) => 0);
@@ -66,6 +67,18 @@ final userClaimsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>
       'date': DateTime.now().subtract(const Duration(days: 15)),
     },
   ];
+});
+
+/// Pending shift requests for manager approval
+final pendingShiftRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final repository = ref.watch(approvalRepositoryProvider);
+  return repository.getPendingShiftRequests();
+});
+
+/// Pending leave approvals for manager
+final pendingLeaveApprovalsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final repository = ref.watch(approvalRepositoryProvider);
+  return repository.getPendingLeaveApprovals();
 });
 
 /// Shift request data from API

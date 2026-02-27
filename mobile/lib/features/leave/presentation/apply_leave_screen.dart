@@ -74,6 +74,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
   DateTime _fromDate = DateTime.now();
   DateTime _toDate = DateTime.now();
   LeaveDurationType _durationType = LeaveDurationType.fullDay;
+  HalfDayType _selectedHalfDayType = HalfDayType.firstHalf;
   bool _isLoading = false;
   bool _isSingleDay = true;
   bool _isSubmitted = false;
@@ -146,6 +147,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
             fromDate: _fromDate,
             toDate: _showSingleDatePicker ? _fromDate : _toDate,
             isHalfDay: _isHalfDay,
+            halfDayType: _isHalfDay ? _selectedHalfDayType : null,
             reason: _reasonController.text.trim(),
             compensatoryDate: _isCompensatory ? _compensatoryDate : null,
             permissionHours: _isPermission ? _permissionHours : null,
@@ -370,6 +372,57 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
                       ),
                     ),
 
+                  // Half Day Type Selector (First Half / Second Half)
+                  if (_isHalfDay)
+                    _buildSectionCard(
+                      title: 'Select Half',
+                      child: Row(
+                        children: HalfDayType.values.map((type) {
+                          final isSelected = type == _selectedHalfDayType;
+                          final isFirst = type == HalfDayType.firstHalf;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedHalfDayType = type),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: EdgeInsets.only(right: isFirst ? 8 : 0),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withOpacity(0.1)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.primary : AppColors.grey300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      isFirst ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+                                      color: isSelected ? AppColors.primary : AppColors.grey500,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      isFirst ? 'First Half' : 'Second Half',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        color: isSelected ? AppColors.primary : AppColors.grey700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
                   // Compensatory Date Section (only for Compensatory leave)
                   if (_isCompensatory)
                     _buildSectionCard(
@@ -566,7 +619,7 @@ class _ApplyLeaveScreenState extends ConsumerState<ApplyLeaveScreen> {
                                   _isPermission
                                       ? 'Permission for ${_permissionHours.toInt()} hour(s)'
                                       : _isHalfDay
-                                          ? 'Half day leave'
+                                          ? '${_selectedHalfDayType == HalfDayType.firstHalf ? 'First half' : 'Second half'} leave'
                                           : 'Total: ${_toDate.difference(_fromDate).inDays + 1} day(s)',
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,

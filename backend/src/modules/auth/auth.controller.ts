@@ -11,6 +11,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { SsoTokenDto } from './dto/sso-login.dto';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators';
 
 @Controller('auth')
@@ -43,5 +44,11 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   async getProfile(@CurrentUser('userId') userId: string) {
     return this.authService.getProfile(userId);
+  }
+
+  @Post('sso/token')
+  @HttpCode(HttpStatus.OK)
+  async ssoTokenLogin(@Body() ssoTokenDto: SsoTokenDto) {
+    return this.authService.loginWithMicrosoftToken(ssoTokenDto.accessToken);
   }
 }

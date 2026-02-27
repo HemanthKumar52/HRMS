@@ -57,6 +57,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   // GPS location address
   String _currentAddress = 'Fetching location...';
 
+  // Strict location permission gate
+  bool _locationGranted = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +72,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startLocationUpdates();
+      _enforceLocationPermission();
     });
   }
 
@@ -99,38 +102,125 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
   }
 
+  /// Strict location permission enforcement — blocks UI until granted
+  Future<void> _enforceLocationPermission() async {
+    // 1. Check location services enabled
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    while (!serviceEnabled) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.location_off, color: AppColors.warning),
+              SizedBox(width: 12),
+              Expanded(child: Text('Location Required')),
+            ],
+          ),
+          content: const Text(
+            'Location services must be enabled to use attendance. Please turn on location services.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                await Geolocator.openLocationSettings();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      // Re-check after user returns from settings
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    }
+
+    // 2. Check location permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    // If still denied, show non-dismissible dialog
+    while (permission == LocationPermission.denied) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.location_off, color: AppColors.error),
+              SizedBox(width: 12),
+              Expanded(child: Text('Permission Required')),
+            ],
+          ),
+          content: const Text(
+            'Location permission is required to mark attendance. You cannot proceed without granting location access.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Grant Permission'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      permission = await Geolocator.requestPermission();
+    }
+
+    // 3. If permanently denied, direct to app settings
+    while (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.location_off, color: AppColors.error),
+              SizedBox(width: 12),
+              Expanded(child: Text('Permission Denied')),
+            ],
+          ),
+          content: const Text(
+            'Location permission is permanently denied. Please enable it from App Settings to continue.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                await Geolocator.openAppSettings();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Open App Settings'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      permission = await Geolocator.checkPermission();
+    }
+
+    // Permission granted — proceed
+    if (mounted) {
+      setState(() {
+        _locationGranted = true;
+      });
+      _startLocationUpdates();
+    }
+  }
+
   void _startLocationUpdates() async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          _showLocationServiceDialog();
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Location permission denied')),
-            );
-          }
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permissions are permanently denied. Please enable in Settings.')),
-          );
-        }
-        return;
-      }
-
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -176,41 +266,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     }
    }
-
-  /// Show dialog to enable location services
-  void _showLocationServiceDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.location_off, color: AppColors.warning),
-            SizedBox(width: 12),
-            Text('Location Required'),
-          ],
-        ),
-        content: const Text(
-          'Location services are disabled. Please enable location to mark attendance.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await Geolocator.openLocationSettings();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
-            child: const Text('Open Settings'),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Reverse geocode GPS coordinates to get a human-readable address
   Future<void> _reverseGeocodeLocation(double lat, double lng) async {
@@ -363,9 +418,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     }
 
     // Face verification for clock in (required for all modes)
+    String? verifiedEmployeeName;
     if (!isClockedIn) {
-      final photoPath = await showFaceVerificationDialog(context);
-      if (photoPath == null) {
+      final verificationResult = await showFaceVerificationDialog(context);
+      if (verificationResult == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -376,40 +432,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
         return;
       }
+      verifiedEmployeeName = verificationResult.employeeName;
       // Store face photo path in provider for avatar display
-      ref.read(facePhotoProvider.notifier).state = photoPath;
+      ref.read(facePhotoProvider.notifier).state = verificationResult.photoPath;
       // Upload face photo to backend (non-blocking)
-      ref.read(faceUploadServiceProvider).uploadFacePhoto(photoPath);
+      if (verificationResult.photoPath != null) {
+        ref.read(faceUploadServiceProvider).uploadFacePhoto(verificationResult.photoPath!);
+      }
     }
 
-    // Location capture for ON_DUTY and FIELD modes (both clock-in AND clock-out)
+    // Location capture — fresh GPS for ON_DUTY/FIELD, use tracked location for others
     if (workMode == 'ON_DUTY' || _selectedCheckInType != null) {
       try {
-        // Check if location service is enabled
-        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          if (mounted) {
-            _showLocationServiceDialog();
-          }
-          return;
-        }
-
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Location permission required'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            }
-            return;
-          }
-        }
-
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
@@ -417,7 +451,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         capturedLat = position.latitude;
         capturedLong = position.longitude;
 
-        // Reverse geocoding for address
         try {
           final placemarks = await placemarkFromCoordinates(
             position.latitude,
@@ -432,7 +465,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           debugPrint('Geocoding error: $e');
           locationAddress = 'Lat: ${position.latitude.toStringAsFixed(6)}, Long: ${position.longitude.toStringAsFixed(6)}';
         }
-
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -515,7 +547,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
       if (mounted) {
         String msg;
-        if (_selectedCheckInType != null) {
+        if (punchType == PunchType.clockIn && verifiedEmployeeName != null) {
+          final name = verifiedEmployeeName[0].toUpperCase() + verifiedEmployeeName.substring(1);
+          msg = 'Welcome $name! Clocked In Successfully';
+        } else if (_selectedCheckInType != null) {
           msg = '${punchType == PunchType.clockIn ? "Clock In" : "Clock Out"} (${_selectedCheckInType!.displayName}) at: $locationAddress';
         } else if (workMode == 'ON_DUTY') {
           msg = '${punchType == PunchType.clockIn ? "Clock In" : "Clock Out"} recorded at: $locationAddress';
@@ -567,6 +602,57 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
     // Responsive map height
     final mapHeight = Responsive.value(mobile: 220.0, tablet: 300.0);
+
+    // Block UI if location permission not yet granted
+    if (!_locationGranted) {
+      return SafeScaffold(
+        appBar: AdaptiveAppBar(
+          title: 'Attendance',
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_off, size: 80, color: AppColors.warning),
+                const SizedBox(height: 24),
+                Text(
+                  'Location Permission Required',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: context.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Location access is mandatory to mark attendance. Please grant location permission to continue.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: context.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: _enforceLocationPermission,
+                  icon: const Icon(Icons.location_on),
+                  label: const Text('Grant Permission'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return SafeScaffold(
       appBar: AdaptiveAppBar(
@@ -883,6 +969,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
                       SizedBox(height: Responsive.value(mobile: 20.0, tablet: 28.0)),
 
+                      // Inline Work Mode Selector
+                      GlassCard(
+                        blur: 10,
+                        opacity: 0.12,
+                        borderRadius: Responsive.cardRadius,
+                        padding: EdgeInsets.all(Responsive.value(mobile: 12.0, tablet: 16.0)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Work Mode',
+                              style: GoogleFonts.poppins(
+                                fontSize: Responsive.sp(12),
+                                fontWeight: FontWeight.w600,
+                                color: context.textSecondary,
+                              ),
+                            ),
+                            SizedBox(height: Responsive.value(mobile: 8.0, tablet: 10.0)),
+                            Row(
+                              children: [
+                                _buildWorkModeChip('OFFICE', 'Office', Icons.business, Colors.blue, workMode),
+                                const SizedBox(width: 6),
+                                _buildWorkModeChip('REMOTE', 'Remote', Icons.home, Colors.green, workMode),
+                                const SizedBox(width: 6),
+                                _buildWorkModeChip('ON_DUTY', 'OD', Icons.directions_car, Colors.orange, workMode),
+                                const SizedBox(width: 6),
+                                _buildWorkModeChip('HYBRID', 'Hybrid', Icons.swap_horiz, Colors.purple, workMode),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+
+                      SizedBox(height: Responsive.value(mobile: 16.0, tablet: 20.0)),
+
                       // Stats Row with glass cards
                       Row(
                         children: [
@@ -917,24 +1038,37 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
                       SizedBox(height: Responsive.value(mobile: 24.0, tablet: 32.0)),
 
-                      // Attendance History
+                      // Attendance History Header with Week/Month Toggle
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Recent History',
+                            'History',
                             style: GoogleFonts.poppins(
                               fontSize: Responsive.sp(18),
                               fontWeight: FontWeight.w600,
                               color: context.textPrimary,
                             ),
                           ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.grey100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildPeriodToggle('week', 'Week'),
+                                _buildPeriodToggle('month', 'Month'),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: Responsive.value(mobile: 12.0, tablet: 16.0)),
 
-                      // Mock attendance history
-                      ..._buildAttendanceHistory(),
+                      // Real attendance history from provider
+                      _buildAttendanceHistorySection(),
 
                       // Bottom padding for nav bar
                       SizedBox(height: Responsive.value(mobile: 80.0, tablet: 100.0)),
@@ -1026,79 +1160,129 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
 
-  List<Widget> _buildAttendanceHistory() {
-    final mockHistory = [
-      {'date': 'Today', 'in': '09:15 AM', 'out': '--:--', 'hours': '0h 0m', 'status': 'Active'},
-      {'date': 'Yesterday', 'in': '09:02 AM', 'out': '06:30 PM', 'hours': '9h 28m', 'status': 'Present'},
-      {'date': '14 Feb', 'in': '08:55 AM', 'out': '06:15 PM', 'hours': '9h 20m', 'status': 'Present'},
-      {'date': '13 Feb', 'in': '--:--', 'out': '--:--', 'hours': '0h 0m', 'status': 'Leave'},
-      {'date': '12 Feb', 'in': '09:30 AM', 'out': '07:00 PM', 'hours': '9h 30m', 'status': 'Present'},
-    ];
+  Widget _buildPeriodToggle(String period, String label) {
+    final selectedPeriod = ref.watch(selectedPeriodProvider);
+    final isSelected = selectedPeriod == period;
+    return GestureDetector(
+      onTap: () => ref.read(selectedPeriodProvider.notifier).state = period,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: Responsive.sp(12),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? Colors.white : AppColors.grey600,
+          ),
+        ),
+      ),
+    );
+  }
 
-    return mockHistory.asMap().entries.map((entry) {
-      final index = entry.key;
-      final item = entry.value;
-      final isLeave = item['status'] == 'Leave';
-      final isActive = item['status'] == 'Active';
+  Widget _buildAttendanceHistorySection() {
+    final selectedPeriod = ref.watch(selectedPeriodProvider);
+    final summaryAsync = ref.watch(attendanceSummaryProvider(selectedPeriod));
 
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: GlassCard(
-          blur: 10,
-          opacity: 0.12,
-          borderRadius: Responsive.cardRadius,
-          padding: EdgeInsets.all(Responsive.value(mobile: 14.0, tablet: 18.0)),
-          child: Row(
-            children: [
-              Container(
-                width: Responsive.value(mobile: 50.0, tablet: 60.0),
-                child: Text(
-                  item['date']!,
-                  style: GoogleFonts.poppins(
-                    fontSize: Responsive.sp(12),
-                    fontWeight: FontWeight.w600,
-                    color: context.textSecondary,
-                  ),
-                ),
+    return summaryAsync.when(
+      data: (summary) {
+        if (summary.dailySummary.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'No attendance records for this period',
+                style: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 13),
               ),
-              SizedBox(width: Responsive.value(mobile: 12.0, tablet: 16.0)),
-              Expanded(
+            ),
+          );
+        }
+        return Column(
+          children: summary.dailySummary.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final hasClockIn = item.clockIn != null;
+            final hasClockOut = item.clockOut != null;
+            final clockInStr = hasClockIn ? DateFormat('hh:mm a').format(item.clockIn!) : '--:--';
+            final clockOutStr = hasClockOut ? DateFormat('hh:mm a').format(item.clockOut!) : '--:--';
+            final isToday = item.date == DateFormat('yyyy-MM-dd').format(DateTime.now());
+            final isLeave = !hasClockIn && !hasClockOut && item.totalMinutes == 0;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GlassCard(
+                blur: 10,
+                opacity: 0.12,
+                borderRadius: Responsive.cardRadius,
+                padding: EdgeInsets.all(Responsive.value(mobile: 14.0, tablet: 18.0)),
                 child: Row(
                   children: [
-                    _buildTimeChip(item['in']!, Icons.login, AppColors.success),
-                    const SizedBox(width: 8),
-                    _buildTimeChip(item['out']!, Icons.logout, AppColors.error),
+                    SizedBox(
+                      width: Responsive.value(mobile: 50.0, tablet: 60.0),
+                      child: Text(
+                        isToday ? 'Today' : DateFormat('dd MMM').format(DateTime.parse(item.date)),
+                        style: GoogleFonts.poppins(
+                          fontSize: Responsive.sp(12),
+                          fontWeight: FontWeight.w600,
+                          color: context.textSecondary,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: Responsive.value(mobile: 12.0, tablet: 16.0)),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          _buildTimeChip(clockInStr, Icons.login, AppColors.success),
+                          const SizedBox(width: 8),
+                          _buildTimeChip(clockOutStr, Icons.logout, AppColors.error),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isLeave
+                            ? AppColors.warning.withOpacity(0.1)
+                            : isToday && !hasClockOut
+                                ? AppColors.success.withOpacity(0.1)
+                                : AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isLeave ? 'Leave' : item.totalHours,
+                        style: GoogleFonts.poppins(
+                          fontSize: Responsive.sp(11),
+                          fontWeight: FontWeight.w600,
+                          color: isLeave
+                              ? AppColors.warning
+                              : isToday && !hasClockOut
+                                  ? AppColors.success
+                                  : AppColors.primary,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isLeave
-                      ? AppColors.warning.withValues(alpha: 0.1)
-                      : isActive
-                          ? AppColors.success.withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isLeave ? 'Leave' : isActive ? item['hours']! : item['hours']!,
-                  style: GoogleFonts.poppins(
-                    fontSize: Responsive.sp(11),
-                    fontWeight: FontWeight.w600,
-                    color: isLeave
-                        ? AppColors.warning
-                        : isActive
-                            ? AppColors.success
-                            : AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ).animate().fadeIn(delay: (600 + index * 80).ms).slideX(begin: 0.1);
+          }).toList(),
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text('Error loading history: $e', style: GoogleFonts.poppins(color: AppColors.error, fontSize: 13)),
         ),
-      ).animate().fadeIn(delay: (600 + index * 80).ms).slideX(begin: 0.1);
-    }).toList();
+      ),
+    );
   }
 
   Widget _buildTimeChip(String time, IconData icon, Color color) {
@@ -1115,6 +1299,46 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildWorkModeChip(String mode, String label, IconData icon, Color color, String? currentMode) {
+    final isSelected = currentMode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(workModeProvider.notifier).setWorkMode(mode);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            vertical: Responsive.value(mobile: 8.0, tablet: 10.0),
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? color : AppColors.grey300,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: Responsive.sp(16), color: isSelected ? color : AppColors.grey500),
+              SizedBox(height: Responsive.value(mobile: 4.0, tablet: 6.0)),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: Responsive.sp(10),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? color : AppColors.grey600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

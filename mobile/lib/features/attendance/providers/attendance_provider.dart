@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/constants/api_constants.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/offline_queue_service.dart';
 import '../../../core/services/sync_service.dart';
@@ -20,6 +22,13 @@ final attendanceSummaryProvider = FutureProvider.autoDispose
 });
 
 final selectedPeriodProvider = StateProvider<String>((ref) => 'week');
+
+final teamTodayStatusProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final dio = ref.read(dioProvider);
+  final response = await dio.get(ApiConstants.attendanceTeamToday);
+  return Map<String, dynamic>.from(response.data['data']);
+});
 
 class PunchNotifier extends StateNotifier<AsyncValue<PunchResult>> {
   final AttendanceRepository _repository;

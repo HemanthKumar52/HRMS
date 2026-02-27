@@ -7,5 +7,5 @@ final currentTimesheetProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
   final response = await dio.get(ApiConstants.timesheetCurrent);
-  return Map<String, dynamic>.from(response.data);
+  return Map<String, dynamic>.from(response.data['data']);
 });

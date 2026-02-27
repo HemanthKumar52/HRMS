@@ -57,7 +57,7 @@ final timesheetDetailProvider = FutureProvider.autoDispose
     .family<Map<String, dynamic>, String>((ref, timesheetId) async {
   final dio = ref.read(dioProvider);
   final response = await dio.get(ApiConstants.timesheetDetail(timesheetId));
-  return Map<String, dynamic>.from(response.data);
+  return Map<String, dynamic>.from(response.data['data']);
 });
 
 class TimesheetScreen extends ConsumerStatefulWidget {
@@ -106,7 +106,7 @@ class _TimesheetScreenState extends ConsumerState<TimesheetScreen> {
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.get(ApiConstants.timesheetCurrent);
-      final data = Map<String, dynamic>.from(response.data);
+      final data = Map<String, dynamic>.from(response.data['data']);
 
       setState(() {
         _timesheetId = data['id'] as String?;

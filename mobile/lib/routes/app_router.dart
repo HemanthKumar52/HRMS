@@ -224,6 +224,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/add-employee',
         name: 'add-employee',
         parentNavigatorKey: _rootNavigatorKey,
+        redirect: (context, state) {
+          final user = ref.read(currentUserProvider);
+          if (user == null || (user.role != 'MANAGER' && user.role != 'HR_ADMIN')) {
+            return '/';
+          }
+          return null;
+        },
         builder: (context, state) => const AddEmployeeScreen(),
       ),
       GoRoute(
