@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:collection'; // Add queue support
 
@@ -13,9 +14,16 @@ class DynamicIslandManager {
   bool _isShowing = false;
 
   void show(BuildContext context, {required String message, bool isError = false}) {
+    // Haptic feedback on notification
+    if (isError) {
+      HapticFeedback.heavyImpact();
+    } else {
+      HapticFeedback.lightImpact();
+    }
+
     // Add to queue
     _queue.add(_NotificationRequest(context, message, isError));
-    
+
     // If not currently showing, process queue
     if (!_isShowing) {
       _processQueue();

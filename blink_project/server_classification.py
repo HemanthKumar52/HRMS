@@ -26,83 +26,117 @@ face_landmarker = FaceLandmarker.create_from_options(options)
 LEFT_EYE_INDICES = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380]
 
-EAR_THRESHOLD = 0.25
-FULLY_OPEN_THRESHOLD = 0.37
+# Minimum EAR difference between open and closed eyes to confirm a blink occurred.
+# A real blink typically produces a 0.05-0.15 EAR drop, so 0.03 is very lenient.
+MIN_BLINK_EAR_DROP = 0.03
 
 
 def classify_frames(frame_list):
     """
-    Classify a list of frames as blinked or unblinked based on EAR.
-    
+    Classify a list of frames as blinked or unblinked using relative EAR.
+    Instead of fixed thresholds, picks the frame with lowest EAR (blink)
+    and highest EAR (open eyes). If the difference is large enough, liveness passes.
+
     Args:
         frame_list: List of OpenCV frames (BGR format)
-    
+
     Returns:
-        Dictionary with 'blinked' and 'unblinked' lists containing classified frames
+        Dictionary with 'blinked', 'unblinked' lists and 'multiple_faces' flag
     """
     blinked_frames = []
     unblinked_frames = []
-    
-    blinking = False
-    blinked_saved = False
-    unblinked_saved = False
-    
+
+    # Collect EAR values for all frames with detected faces
+    frame_ears = []
+    no_face_count = 0
+    multiple_faces_count = 0
+
     for frame_idx, frame in enumerate(frame_list):
         try:
-            # Convert BGR to RGB for MediaPipe
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Create MediaPipe image
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            
-            # Get landmarks
             results = face_landmarker.detect(mp_image)
-            
+
             if not results.face_landmarks:
+                no_face_count += 1
                 continue
-            
+
+            # Multiple face check — only 1 face allowed
+            if len(results.face_landmarks) > 1:
+                multiple_faces_count += 1
+                print(f"  WARNING: {len(results.face_landmarks)} faces detected in frame {frame_idx}")
+                continue
+
             landmarks = results.face_landmarks[0]
-            
-            # Calculate EAR
+
             left_ear = eye_aspect_ratio(landmarks, LEFT_EYE_INDICES)
             right_ear = eye_aspect_ratio(landmarks, RIGHT_EYE_INDICES)
             ear = (left_ear + right_ear) / 2.0
-            
-            # BLINK DETECTION: Eyes closing
-            if ear < EAR_THRESHOLD and not blinking and not blinked_saved:
-                blinking = True
-                blinked_frames.append({
-                    'frame': frame,
-                    'frame_idx': frame_idx,
-                    'ear': ear,
-                    'type': 'blinked'
-                })
-                blinked_saved = True
-            
-            # EYES OPEN: Eyes fully open
-            if ear > FULLY_OPEN_THRESHOLD and blinking and not unblinked_saved:
-                blinking = False
-                unblinked_frames.append({
-                    'frame': frame,
-                    'frame_idx': frame_idx,
-                    'ear': ear,
-                    'type': 'unblinked'
-                })
-                unblinked_saved = True
-            
-            # Reset for next cycle
-            if blinked_saved and unblinked_saved:
-                blinked_saved = False
-                unblinked_saved = False
-                blinking = False
-        
+
+            frame_ears.append({
+                'frame': frame,
+                'frame_idx': frame_idx,
+                'ear': ear,
+            })
         except Exception as e:
             print(f"Error classifying frame {frame_idx}:", e)
             continue
-    
+
+    # If majority of frames have multiple faces, flag it
+    total_valid = len(frame_ears) + multiple_faces_count
+    multiple_faces_detected = (
+        multiple_faces_count > 0 and
+        total_valid > 0 and
+        multiple_faces_count >= total_valid * 0.3
+    )
+
+    if multiple_faces_detected:
+        print(f"  MULTIPLE FACES: {multiple_faces_count}/{total_valid} frames have >1 face — REJECTED")
+        return {
+            'blinked': [],
+            'unblinked': [],
+            'multiple_faces': True,
+            'multi_face_count': multiple_faces_count,
+        }
+
+    if not frame_ears:
+        print(f"  WARNING: No faces detected in any of {len(frame_list)} frames ({no_face_count} no-face)")
+        return {
+            'blinked': [],
+            'unblinked': [],
+            'multiple_faces': False,
+            'multi_face_count': multiple_faces_count,
+        }
+
+    # Debug: show EAR distribution
+    ears = [f['ear'] for f in frame_ears]
+    min_ear = min(ears)
+    max_ear = max(ears)
+    ear_drop = max_ear - min_ear
+    print(f"  EAR stats: min={min_ear:.4f}, max={max_ear:.4f}, drop={ear_drop:.4f}, avg={sum(ears)/len(ears):.4f} ({len(ears)} faces, {no_face_count} no-face)")
+    print(f"  EAR values: {[round(e, 4) for e in ears]}")
+    print(f"  Blink detection: need drop > {MIN_BLINK_EAR_DROP} (got {ear_drop:.4f})")
+
+    # Relative approach: pick lowest EAR as blink, highest as open
+    # If the difference is large enough, a real blink occurred
+    if ear_drop >= MIN_BLINK_EAR_DROP:
+        best_closed = min(frame_ears, key=lambda f: f['ear'])
+        best_open = max(frame_ears, key=lambda f: f['ear'])
+
+        blinked_frames.append({**best_closed, 'type': 'blinked'})
+        unblinked_frames.append({**best_open, 'type': 'unblinked'})
+
+        print(f"  BLINK detected: EAR={best_closed['ear']:.4f} (frame {best_closed['frame_idx']})")
+        print(f"  OPEN detected: EAR={best_open['ear']:.4f} (frame {best_open['frame_idx']})")
+        print(f"  LIVENESS PASSED (drop={ear_drop:.4f})")
+    else:
+        print(f"  LIVENESS FAILED — no significant blink detected (drop={ear_drop:.4f} < {MIN_BLINK_EAR_DROP})")
+
     return {
         'blinked': blinked_frames,
-        'unblinked': unblinked_frames
+        'unblinked': unblinked_frames,
+        'multiple_faces': False,
+        'multi_face_count': multiple_faces_count,
     }
 
 

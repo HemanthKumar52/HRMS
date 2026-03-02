@@ -133,7 +133,7 @@ export class UsersService {
         lastName: data.lastName,
         phone: data.phone,
         role: data.role,
-        organizationId: data.organizationId,
+        organizationId: data.organizationId!,
         managerId: data.managerId,
         department: data.department,
         designation: data.designation,
@@ -186,6 +186,40 @@ export class UsersService {
       data: { avatarUrl },
     });
     return { avatarUrl };
+  }
+
+  async updateFacePhoto(
+    firstName: string,
+    lastName: string,
+    organizationId: string,
+    facePhoto: string,
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        firstName: { equals: firstName, mode: 'insensitive' },
+        lastName: { equals: lastName, mode: 'insensitive' },
+        organizationId,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `Employee "${firstName} ${lastName}" not found`,
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { facePhoto },
+    });
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      message: 'Face photo updated successfully',
+    };
   }
 
   async findByEmail(email: string) {

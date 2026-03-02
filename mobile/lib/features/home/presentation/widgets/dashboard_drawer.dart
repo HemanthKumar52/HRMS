@@ -67,6 +67,7 @@ class DashboardDrawer extends ConsumerWidget {
       return [
         _buildSectionHeader(context, 'HR Management'),
         _buildDrawerItem(context, icon: Icons.dashboard_outlined, label: 'HR Dashboard', route: '/', isSelected: currentRoute == '/'),
+        _buildDrawerItem(context, icon: Icons.person_add_alt_1, label: 'Add Employee', route: '/add-employee', isSelected: currentRoute == '/add-employee'),
         _buildDrawerItem(context, icon: Icons.chat_bubble_outline, label: 'Chat', route: '/directory', isSelected: currentRoute == '/directory'),
         _buildDrawerItem(context, icon: Icons.attach_money_outlined, label: 'Payroll', route: '/payroll-dashboard', isSelected: currentRoute == '/payroll-dashboard'),
         _buildDrawerItem(context, icon: Icons.analytics_outlined, label: 'Reports', route: '/hr-dashboard', isSelected: currentRoute == '/hr-dashboard'),
@@ -79,6 +80,7 @@ class DashboardDrawer extends ConsumerWidget {
       return [
         _buildSectionHeader(context, 'Manager Portal'),
         _buildDrawerItem(context, icon: Icons.dashboard_outlined, label: 'Manager Dashboard', route: '/', isSelected: currentRoute == '/'),
+        _buildDrawerItem(context, icon: Icons.person_add_alt_1, label: 'Add Employee', route: '/add-employee', isSelected: currentRoute == '/add-employee'),
         _buildDrawerItem(context, icon: Icons.chat_bubble_outline, label: 'Team Chat', route: '/directory', isSelected: currentRoute == '/directory'),
         _buildDrawerItem(context, icon: Icons.playlist_add_check, label: 'Approvals', route: '/approvals', isSelected: currentRoute == '/approvals'),
         const Divider(),
@@ -90,6 +92,7 @@ class DashboardDrawer extends ConsumerWidget {
        return [
         _buildSectionHeader(context, 'System Administration'),
         _buildDrawerItem(context, icon: Icons.admin_panel_settings_outlined, label: 'IT Dashboard', route: '/', isSelected: currentRoute == '/'),
+        _buildDrawerItem(context, icon: Icons.person_add_alt_1, label: 'Add Employee', route: '/add-employee', isSelected: currentRoute == '/add-employee'),
         _buildDrawerItem(context, icon: Icons.settings_input_component, label: 'System Config', route: '/it-admin-dashboard', isSelected: currentRoute == '/it-admin-dashboard'),
        ];
     }

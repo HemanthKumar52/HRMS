@@ -41,7 +41,14 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(find:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(tasklist:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(powershell.exe -Command \"Stop-Process -Id 24544 -Force -ErrorAction SilentlyContinue; Stop-Process -Id 31024 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(npx prisma db seed:*)",
+      "Bash(grep:*)",
+      "Bash(ipconfig:*)",
+      "Bash(pip install:*)"
     ]
   }
 }

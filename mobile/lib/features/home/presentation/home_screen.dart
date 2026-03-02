@@ -236,7 +236,9 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
   }
 
   Widget _buildMainView(BuildContext context, dynamic user) {
-    final facePhoto = ref.watch(facePhotoProvider);
+    final sessionPhoto = ref.watch(facePhotoProvider);
+    final dbPhoto = ref.watch(profilePhotoProvider);
+    final facePhoto = sessionPhoto ?? dbPhoto;
 
     return Column(
       key: const ValueKey('main'),
@@ -655,7 +657,9 @@ class _GlassDashboardAppBar extends ConsumerWidget
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Responsive.init(context);
-    final facePhoto = ref.watch(facePhotoProvider);
+    final sessionPhoto = ref.watch(facePhotoProvider);
+    final dbPhoto = ref.watch(profilePhotoProvider);
+    final facePhoto = sessionPhoto ?? dbPhoto;
 
     return ClipRect(
       child: BackdropFilter(

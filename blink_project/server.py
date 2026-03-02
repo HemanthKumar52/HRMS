@@ -6,14 +6,19 @@ import datetime
 import base64
 import json
 from server_classification import classify_frames, detect_spectacles_in_frame
+
+# --- InsightFace-based face recognition ---
+FACE_RECOGNITION_AVAILABLE = False
+face_app = None
+
 try:
-    import face_recognition
-    from face_comparison import compare_faces
-    from face_classifier import classify_face
+    from insightface.app import FaceAnalysis
+    face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
     FACE_RECOGNITION_AVAILABLE = True
-except ImportError:
-    FACE_RECOGNITION_AVAILABLE = False
-    print("WARNING: face_recognition library not found. Face verification will be disabled.")
+    print("InsightFace loaded successfully (buffalo_l model).")
+except Exception as e:
+    print(f"WARNING: InsightFace not available: {e}. Face verification will be disabled.")
 
 app = Flask(__name__)
 
@@ -29,16 +34,17 @@ os.makedirs(SESSION_FOLDER, exist_ok=True)
 
 print("Saving images to:", SESSION_FOLDER)
 
-# --- Pre-load registered face encodings at startup ---
+# --- Pre-load registered face embeddings at startup ---
 REGISTERED_EMPLOYEES = []
 
+
 def load_registered_faces():
-    """Load all registered face images and pre-compute their 128D encodings."""
+    """Load all registered face images and compute 512D InsightFace embeddings."""
     global REGISTERED_EMPLOYEES
     REGISTERED_EMPLOYEES = []
 
     if not FACE_RECOGNITION_AVAILABLE:
-        print("face_recognition not available — skipping registered face loading.")
+        print("InsightFace not available — skipping registered face loading.")
         return
 
     if not os.path.isdir(REGISTERED_FACES_DIR):
@@ -52,13 +58,17 @@ def load_registered_faces():
         filepath = os.path.join(REGISTERED_FACES_DIR, filename)
         name = os.path.splitext(filename)[0]  # anish.jpg -> anish
 
-        img = face_recognition.load_image_file(filepath)
-        encodings = face_recognition.face_encodings(img)
+        img = cv2.imread(filepath)
+        if img is None:
+            print(f"  SKIPPED (cannot read): {filename}")
+            continue
 
-        if encodings:
+        faces = face_app.get(img)
+
+        if faces:
             REGISTERED_EMPLOYEES.append({
                 'name': name,
-                'encoding': encodings[0],
+                'embedding': faces[0].embedding,  # 512D normed vector
                 'file': filename,
             })
             print(f"  Registered: {name} ({filename})")
@@ -68,41 +78,54 @@ def load_registered_faces():
     print(f"Loaded {len(REGISTERED_EMPLOYEES)} registered faces.")
 
 
+def cosine_similarity(a, b):
+    """Compute cosine similarity between two vectors."""
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+
 def verify_face_against_registered(frame):
     """
-    Compare a captured frame against all registered employees.
+    Compare a captured frame against all registered employees using InsightFace.
 
     Args:
-        frame: OpenCV BGR image (unblinked face from liveness check)
+        frame: OpenCV BGR image
 
     Returns:
-        dict with matched, employee_name, confidence
+        dict with matched, employee_name, confidence, num_faces
     """
     if not REGISTERED_EMPLOYEES:
-        return {'matched': False, 'employee_name': None, 'confidence': 0.0, 'error': 'No registered faces loaded'}
+        return {'matched': False, 'employee_name': None, 'confidence': 0.0, 'num_faces': 0, 'error': 'No registered faces loaded'}
 
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    encodings = face_recognition.face_encodings(rgb)
+    faces = face_app.get(frame)
 
-    if not encodings:
-        return {'matched': False, 'employee_name': None, 'confidence': 0.0, 'error': 'No face detected in captured frame'}
+    if not faces:
+        return {'matched': False, 'employee_name': None, 'confidence': 0.0, 'num_faces': 0, 'error': 'No face detected in captured frame'}
 
-    captured_encoding = encodings[0]
+    if len(faces) > 1:
+        return {'matched': False, 'employee_name': None, 'confidence': 0.0, 'num_faces': len(faces), 'error': 'multiple_faces_detected'}
 
-    # Compare against each registered employee
-    registered_encodings = [emp['encoding'] for emp in REGISTERED_EMPLOYEES]
-    distances = face_recognition.face_distance(registered_encodings, captured_encoding)
+    captured_embedding = faces[0].embedding
 
-    best_idx = int(np.argmin(distances))
-    best_distance = float(distances[best_idx])
-    confidence = round(max(0.0, min(1.0, 1.0 - best_distance)), 4)
-    is_match = best_distance < 0.6  # standard threshold
+    # Compare against each registered employee using cosine similarity
+    best_score = -1.0
+    best_idx = -1
+
+    for i, emp in enumerate(REGISTERED_EMPLOYEES):
+        score = cosine_similarity(captured_embedding, emp['embedding'])
+        if score > best_score:
+            best_score = score
+            best_idx = i
+
+    # InsightFace cosine similarity threshold: 0.4 is a reasonable match threshold
+    confidence = round(max(0.0, min(1.0, best_score)), 4)
+    is_match = best_score >= 0.4
 
     if is_match:
         return {
             'matched': True,
             'employee_name': REGISTERED_EMPLOYEES[best_idx]['name'],
             'confidence': confidence,
+            'num_faces': 1,
             'error': None,
         }
     else:
@@ -110,6 +133,7 @@ def verify_face_against_registered(frame):
             'matched': False,
             'employee_name': None,
             'confidence': confidence,
+            'num_faces': 1,
             'error': None,
         }
 
@@ -141,6 +165,14 @@ def log_attendance(employee_name, status, confidence, session):
     return entry
 
 
+def decode_base64_frame(b64_str):
+    """Decode a base64 string (with or without data URI prefix) to OpenCV BGR image."""
+    raw_b64 = b64_str.split(",")[1] if "," in b64_str else b64_str
+    img_bytes = base64.b64decode(raw_b64)
+    npimg = np.frombuffer(img_bytes, np.uint8)
+    return cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+
+
 # ---- Routes ----
 
 @app.route('/')
@@ -163,9 +195,7 @@ def check_spectacles():
             return jsonify({"detected": False, "confidence": 0.0})
 
         try:
-            img_bytes = base64.b64decode(frame_b64.split(",")[1])
-            npimg = np.frombuffer(img_bytes, np.uint8)
-            frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+            frame = decode_base64_frame(frame_b64)
             if frame is None:
                 return jsonify({"detected": False, "confidence": 0.0})
         except Exception as e:
@@ -183,83 +213,93 @@ def check_spectacles():
         return jsonify({"detected": False, "confidence": 0.0, "error": str(e)})
 
 
-@app.route('/upload_nodes', methods=['POST'])
-def upload_nodes():
+@app.route('/verify_face', methods=['POST'])
+def verify_face_endpoint():
+    """
+    Simple face verification — takes ONE base64 photo, compares against all
+    registered employees, logs attendance, and returns the result.
+
+    Expects JSON: { "frame": "data:image/jpeg;base64,..." }
+    Returns: { status, matched, employee_name, confidence, attendance }
+    """
     try:
+        if not FACE_RECOGNITION_AVAILABLE:
+            return jsonify({
+                "status": "failed",
+                "matched": False,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "Face recognition engine not available",
+            })
+
         data = request.get_json()
+        frame_b64 = data.get("frame", "")
 
-        all_frames_b64 = data.get("all_frames", [])
-        detection_cache = data.get("detection_cache", [])
+        if not frame_b64:
+            return jsonify({
+                "status": "failed",
+                "matched": False,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "No frame provided",
+            })
 
+        # Decode
+        try:
+            frame = decode_base64_frame(frame_b64)
+            if frame is None:
+                return jsonify({
+                    "status": "failed",
+                    "matched": False,
+                    "employee_name": None,
+                    "confidence": 0.0,
+                    "error": "Failed to decode image",
+                })
+        except Exception as e:
+            return jsonify({
+                "status": "failed",
+                "matched": False,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": f"Image decode error: {e}",
+            })
+
+        # Save the captured frame
+        os.makedirs(SESSION_FOLDER, exist_ok=True)
+        timestamp = datetime.datetime.now().strftime("%H%M%S")
+        cv2.imwrite(os.path.join(SESSION_FOLDER, f"verify_{timestamp}.jpg"), frame)
+
+        # Verify against registered faces
         print(f"\n{'='*60}")
-        print(f"Received {len(all_frames_b64)} frames, {len(detection_cache)} cache entries")
+        print("Running face verification (single photo)...")
+        verification = verify_face_against_registered(frame)
 
-        if not all_frames_b64:
-            return jsonify({"status": "failed", "error": "No frames received"})
+        # Check for multiple faces
+        if verification.get('error') == 'multiple_faces_detected':
+            print(f"  REJECTED: Multiple faces detected ({verification.get('num_faces')})")
+            print(f"{'='*60}\n")
+            return jsonify({
+                "status": "failed",
+                "matched": False,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "multiple_faces_detected",
+                "message": "Multiple faces detected. Only one person should be in the frame.",
+            })
 
-        # 1. Decode all frames
-        frame_list = []
-        for i, frame_b64 in enumerate(all_frames_b64):
-            try:
-                img_bytes = base64.b64decode(frame_b64.split(",")[1])
-                npimg = np.frombuffer(img_bytes, np.uint8)
-                frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-                if frame is not None:
-                    frame_list.append(frame)
-            except Exception as e:
-                print(f"Error decoding frame {i}: {e}")
-                continue
+        # Check for no face
+        if verification.get('num_faces', 0) == 0:
+            print(f"  NO FACE detected")
+            print(f"{'='*60}\n")
+            return jsonify({
+                "status": "failed",
+                "matched": False,
+                "employee_name": None,
+                "confidence": 0.0,
+                "error": "No face detected in the photo. Please try again.",
+            })
 
-        print(f"Decoded {len(frame_list)} frames")
-
-        # 2. Blink classification (liveness detection)
-        print("Running blink classification...")
-        classification_result = classify_frames(frame_list)
-
-        blinked_frames = classification_result['blinked']
-        unblinked_frames = classification_result['unblinked']
-
-        liveness_passed = len(blinked_frames) > 0 and len(unblinked_frames) > 0
-        print(f"Liveness: {len(blinked_frames)} blinked, {len(unblinked_frames)} unblinked -> {'PASS' if liveness_passed else 'FAIL'}")
-
-        # 3. Save frames to disk
-        blinked_folder = os.path.join(SESSION_FOLDER, "blinked")
-        unblinked_folder = os.path.join(SESSION_FOLDER, "unblinked")
-        os.makedirs(blinked_folder, exist_ok=True)
-        os.makedirs(unblinked_folder, exist_ok=True)
-
-        for i, item in enumerate(blinked_frames):
-            cv2.imwrite(os.path.join(blinked_folder, f"blinked_{i+1}.jpg"), item['frame'])
-        for i, item in enumerate(unblinked_frames):
-            cv2.imwrite(os.path.join(unblinked_folder, f"unblinked_{i+1}.jpg"), item['frame'])
-
-        if detection_cache:
-            with open(os.path.join(SESSION_FOLDER, "detection_cache.json"), 'w') as f:
-                json.dump(detection_cache, f, indent=2)
-
-        # 4. Face verification (simultaneous with liveness)
-        verification = {'matched': False, 'employee_name': None, 'confidence': 0.0, 'error': None}
-        attendance_status = 'ABSENT'
-
-        if liveness_passed and FACE_RECOGNITION_AVAILABLE:
-            # Use the best unblinked frame (eyes open) for face matching
-            best_frame = unblinked_frames[0]['frame']
-            print("Running face verification against registered faces...")
-            verification = verify_face_against_registered(best_frame)
-
-            if verification['matched']:
-                attendance_status = 'PRESENT'
-                print(f"  MATCH: {verification['employee_name']} (confidence: {verification['confidence']})")
-            else:
-                print(f"  NO MATCH (best confidence: {verification['confidence']})")
-        elif not liveness_passed:
-            verification['error'] = 'Liveness check failed — no valid blink detected'
-            print("  Skipping face verification — liveness failed")
-        elif not FACE_RECOGNITION_AVAILABLE:
-            verification['error'] = 'face_recognition library not installed'
-            print("  Skipping face verification — library not available")
-
-        # 5. Log attendance
+        attendance_status = 'PRESENT' if verification['matched'] else 'ABSENT'
         attendance_entry = log_attendance(
             employee_name=verification.get('employee_name'),
             status=attendance_status,
@@ -267,31 +307,37 @@ def upload_nodes():
             session=session_name,
         )
 
+        if verification['matched']:
+            print(f"  MATCH: {verification['employee_name']} (confidence: {verification['confidence']})")
+        else:
+            print(f"  NO MATCH (best confidence: {verification['confidence']})")
         print(f"{'='*60}\n")
 
         return jsonify({
             "status": "success",
-            "blinked": len(blinked_frames),
-            "unblinked": len(unblinked_frames),
-            "liveness": liveness_passed,
-            "verification": {
-                "matched": verification['matched'],
-                "employee_name": verification.get('employee_name'),
-                "confidence": verification.get('confidence', 0.0),
-            },
+            "matched": verification['matched'],
+            "employee_name": verification.get('employee_name'),
+            "confidence": verification.get('confidence', 0.0),
             "attendance": attendance_entry,
         })
 
     except Exception as e:
-        print(f"Upload Error: {e}")
-        return jsonify({"status": "failed", "error": str(e)})
+        print(f"[VerifyFace] Error: {e}")
+        return jsonify({
+            "status": "failed",
+            "matched": False,
+            "employee_name": None,
+            "confidence": 0.0,
+            "error": str(e),
+        })
 
 
 @app.route('/compare_face', methods=['POST'])
 def compare_face_endpoint():
+    """Compare two face photos and return similarity."""
     try:
         if not FACE_RECOGNITION_AVAILABLE:
-            return jsonify({"match": False, "confidence": 0.0, "error": "face_recognition library not installed"})
+            return jsonify({"match": False, "confidence": 0.0, "error": "Face recognition engine not available"})
 
         data = request.get_json()
         captured_b64 = data.get("captured_frame", "")
@@ -300,19 +346,24 @@ def compare_face_endpoint():
         if not captured_b64 or not reference_b64:
             return jsonify({"match": False, "confidence": 0.0, "error": "Missing captured_frame or reference_face"})
 
-        def decode(b64):
-            raw = b64.split(",")[1] if "," in b64 else b64
-            return cv2.imdecode(np.frombuffer(base64.b64decode(raw), np.uint8), cv2.IMREAD_COLOR)
-
-        captured_frame = decode(captured_b64)
-        reference_frame = decode(reference_b64)
+        captured_frame = decode_base64_frame(captured_b64)
+        reference_frame = decode_base64_frame(reference_b64)
 
         if captured_frame is None or reference_frame is None:
             return jsonify({"match": False, "confidence": 0.0, "error": "Failed to decode image(s)"})
 
-        result = compare_faces(captured_frame, reference_frame)
-        print(f"Face comparison: match={result['match']}, confidence={result['confidence']}")
-        return jsonify(result)
+        faces_cap = face_app.get(captured_frame)
+        faces_ref = face_app.get(reference_frame)
+
+        if not faces_cap or not faces_ref:
+            return jsonify({"match": False, "confidence": 0.0, "error": "No face detected in one or both images"})
+
+        score = cosine_similarity(faces_cap[0].embedding, faces_ref[0].embedding)
+        confidence = round(max(0.0, min(1.0, score)), 4)
+        is_match = score >= 0.4
+
+        print(f"Face comparison: match={is_match}, confidence={confidence}")
+        return jsonify({"match": is_match, "confidence": confidence})
 
     except Exception as e:
         print(f"Compare face error: {e}")
@@ -321,26 +372,216 @@ def compare_face_endpoint():
 
 @app.route('/classify_face', methods=['POST'])
 def classify_face_endpoint():
+    """Classify a captured face against a provided list of employee face photos."""
     try:
         if not FACE_RECOGNITION_AVAILABLE:
-            return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "face_recognition library not installed"})
+            return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "Face recognition engine not available"})
 
         data = request.get_json()
-        captured_frame = data.get("captured_frame", "")
+        captured_frame_b64 = data.get("captured_frame", "")
         employees = data.get("employees", [])
 
-        if not captured_frame:
+        if not captured_frame_b64:
             return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "Missing captured_frame"})
         if not employees:
             return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "No employee faces provided"})
 
-        result = classify_face(captured_frame, employees)
+        captured_frame = decode_base64_frame(captured_frame_b64)
+        if captured_frame is None:
+            return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "Failed to decode captured frame"})
+
+        faces_cap = face_app.get(captured_frame)
+        if not faces_cap:
+            return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": "No face detected in captured frame"})
+
+        captured_embedding = faces_cap[0].embedding
+
+        best_score = -1.0
+        best_emp = None
+
+        for emp in employees:
+            face_photo_b64 = emp.get('facePhoto', '')
+            if not face_photo_b64:
+                continue
+
+            ref_frame = decode_base64_frame(face_photo_b64)
+            if ref_frame is None:
+                continue
+
+            ref_faces = face_app.get(ref_frame)
+            if not ref_faces:
+                continue
+
+            score = cosine_similarity(captured_embedding, ref_faces[0].embedding)
+            if score > best_score:
+                best_score = score
+                best_emp = emp
+
+        confidence = round(max(0.0, min(1.0, best_score)), 4)
+        is_match = best_score >= 0.4 and best_emp is not None
+
+        result = {
+            "matched": is_match,
+            "employee_id": best_emp.get('id') if is_match else None,
+            "employee_name": best_emp.get('name') if is_match else None,
+            "confidence": confidence,
+        }
+
         print(f"Classification: matched={result['matched']}, employee={result.get('employee_name')}, confidence={result['confidence']}")
         return jsonify(result)
 
     except Exception as e:
         print(f"Classify face error: {e}")
         return jsonify({"matched": False, "employee_id": None, "employee_name": None, "confidence": 0.0, "error": str(e)})
+
+
+@app.route('/check_duplicate_face', methods=['POST'])
+def check_duplicate_face():
+    """
+    Check if a face already exists among registered employees.
+    Expects JSON: { "face_photo": "data:image/jpeg;base64,...", "name": "optional name" }
+    Returns: { duplicate: bool, existing_name: str|null, confidence: float }
+    """
+    try:
+        if not FACE_RECOGNITION_AVAILABLE or not REGISTERED_EMPLOYEES:
+            return jsonify({'duplicate': False, 'existing_name': None, 'confidence': 0.0})
+
+        data = request.get_json()
+        face_photo_b64 = data.get('face_photo', '')
+        provided_name = data.get('name', '').strip()
+
+        if not face_photo_b64:
+            return jsonify({'duplicate': False, 'existing_name': None, 'confidence': 0.0, 'error': 'No photo provided'})
+
+        frame = decode_base64_frame(face_photo_b64)
+        if frame is None:
+            return jsonify({'duplicate': False, 'existing_name': None, 'confidence': 0.0, 'error': 'Decode failed'})
+
+        faces = face_app.get(frame)
+        if not faces:
+            return jsonify({'duplicate': False, 'existing_name': None, 'confidence': 0.0, 'error': 'No face detected'})
+
+        captured_embedding = faces[0].embedding
+
+        best_score = -1.0
+        best_idx = -1
+
+        for i, emp in enumerate(REGISTERED_EMPLOYEES):
+            score = cosine_similarity(captured_embedding, emp['embedding'])
+            if score > best_score:
+                best_score = score
+                best_idx = i
+
+        confidence = round(max(0.0, min(1.0, best_score)), 4)
+        is_duplicate = best_score >= 0.4
+        existing_name = REGISTERED_EMPLOYEES[best_idx]['name'] if is_duplicate else None
+
+        # If same person same name → not a conflict, it's an update
+        if is_duplicate and provided_name and existing_name and provided_name.lower() == existing_name.lower():
+            return jsonify({
+                'duplicate': False,
+                'same_person_update': True,
+                'existing_name': existing_name,
+                'confidence': confidence,
+            })
+
+        return jsonify({
+            'duplicate': is_duplicate,
+            'existing_name': existing_name,
+            'confidence': confidence,
+        })
+
+    except Exception as e:
+        print(f"[CheckDuplicate] Error: {e}")
+        return jsonify({'duplicate': False, 'existing_name': None, 'confidence': 0.0, 'error': str(e)})
+
+
+@app.route('/register_face', methods=['POST'])
+def register_face():
+    """
+    Register a new employee face for recognition.
+    Expects JSON: { "name": "FirstName LastName", "face_photo": "data:image/jpeg;base64,..." }
+    Saves to registered_faces/ and hot-reloads the face registry.
+    """
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        face_photo_b64 = data.get('face_photo', '')
+
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        if not face_photo_b64:
+            return jsonify({'success': False, 'error': 'Face photo is required'}), 400
+
+        # Decode the base64 image
+        try:
+            frame = decode_base64_frame(face_photo_b64)
+            if frame is None:
+                return jsonify({'success': False, 'error': 'Failed to decode image'}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Image decode error: {e}'}), 400
+
+        # Validate that a face is actually detectable in the photo
+        if FACE_RECOGNITION_AVAILABLE:
+            faces = face_app.get(frame)
+            if not faces:
+                return jsonify({'success': False, 'error': 'No face detected in the photo. Please retake.'}), 400
+
+            # Check for duplicate face with DIFFERENT name
+            if REGISTERED_EMPLOYEES:
+                captured_embedding = faces[0].embedding
+
+                best_score = -1.0
+                best_idx = -1
+
+                for i, emp in enumerate(REGISTERED_EMPLOYEES):
+                    score = cosine_similarity(captured_embedding, emp['embedding'])
+                    if score > best_score:
+                        best_score = score
+                        best_idx = i
+
+                if best_score >= 0.4:
+                    existing_name = REGISTERED_EMPLOYEES[best_idx]['name']
+                    # Same face, different name → reject (duplicate person)
+                    if existing_name.lower() != name.lower():
+                        return jsonify({
+                            'success': False,
+                            'error': f'This face is already registered under "{existing_name}". Cannot register the same face with different details.',
+                            'duplicate': True,
+                            'existing_name': existing_name,
+                        }), 409
+                    # Same face, same name → allow (update)
+                    print(f"[RegisterFace] Updating existing face for: {name}")
+
+        # Save to registered_faces/ directory
+        os.makedirs(REGISTERED_FACES_DIR, exist_ok=True)
+        filename = f"{name}.jpg"
+        filepath = os.path.join(REGISTERED_FACES_DIR, filename)
+        cv2.imwrite(filepath, frame)
+        print(f"[RegisterFace] Saved face photo: {filepath}")
+
+        # Hot-reload all registered faces so new employee is immediately recognized
+        load_registered_faces()
+
+        return jsonify({
+            'success': True,
+            'name': name,
+            'file': filename,
+            'total_registered': len(REGISTERED_EMPLOYEES),
+        })
+
+    except Exception as e:
+        print(f"[RegisterFace] Error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/registered_faces', methods=['GET'])
+def list_registered_faces():
+    """Return the list of all registered employee names."""
+    return jsonify({
+        'total': len(REGISTERED_EMPLOYEES),
+        'employees': [{'name': emp['name'], 'file': emp['file']} for emp in REGISTERED_EMPLOYEES],
+    })
 
 
 @app.route('/attendance', methods=['GET'])

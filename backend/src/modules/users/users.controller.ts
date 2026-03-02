@@ -18,6 +18,7 @@ import { extname } from 'path';
 import { UsersService } from './users.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateFaceDto } from './dto/update-face.dto';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -45,6 +46,21 @@ export class UsersController {
     @Query() query: ListUsersDto,
   ) {
     return this.usersService.findAll(user.organizationId, query);
+  }
+
+  @Patch('update-face')
+  @Roles(Role.MANAGER, Role.HR_ADMIN)
+  @UseGuards(RolesGuard)
+  async updateFacePhoto(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() updateFaceDto: UpdateFaceDto,
+  ) {
+    return this.usersService.updateFacePhoto(
+      updateFaceDto.firstName,
+      updateFaceDto.lastName,
+      user.organizationId,
+      updateFaceDto.facePhoto,
+    );
   }
 
   @Get('me/face-photo')

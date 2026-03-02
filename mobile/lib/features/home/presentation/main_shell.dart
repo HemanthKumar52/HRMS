@@ -111,7 +111,21 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     return Scaffold(
       extendBody: true,
-      body: widget.child,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(currentIndex),
+          child: widget.child,
+        ),
+      ),
       bottomNavigationBar: GlassBottomNavBar(
         currentIndex: currentIndex,
         onTap: _onItemTapped,

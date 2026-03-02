@@ -5,10 +5,12 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../network/blink_api_client.dart';
+import '../services/local_face_store.dart';
 import '../theme/app_colors.dart';
 import 'glass_card.dart';
 
@@ -21,11 +23,12 @@ class FaceVerificationResult {
   FaceVerificationResult({this.photoPath, this.employeeName, this.confidence = 0.0});
 }
 
-/// Verification phases
-enum _VerificationPhase { welcome, capture, processing, success, failed }
+/// Verification phases — simplified (no liveness)
+enum _VerificationPhase { countdown, capturing, processing, success, failed }
 
-/// Dialog that shows camera preview, captures frames, and verifies liveness
-/// via the blink detection Flask server before allowing attendance clock-in.
+/// Dialog that shows camera preview, captures a SINGLE face photo,
+/// and verifies identity against registered employees.
+/// No liveness/blink detection — just one photo and verify.
 class FaceVerificationDialog extends ConsumerStatefulWidget {
   final Function(FaceVerificationResult? result) onComplete;
 
@@ -46,30 +49,19 @@ class _FaceVerificationDialogState
   String? _errorMessage;
 
   // Phase management
-  _VerificationPhase _phase = _VerificationPhase.welcome;
-  int _welcomeCountdown = 3;
-  int _captureCountdown = 15;
-  int _framesCaptured = 0;
+  _VerificationPhase _phase = _VerificationPhase.countdown;
+  int _countdown = 3;
 
   // Timers
-  Timer? _welcomeTimer;
-  Timer? _captureTimer;
   Timer? _countdownTimer;
 
-  // Frame buffer for blink server
-  final List<String> _frameBuffer = [];
-  static const int _maxFrames = 100;
-
-  // Last captured photo path for avatar
+  // Captured photo
   String? _lastPhotoPath;
 
-  // Prevent concurrent takePicture calls
-  bool _isTakingPicture = false;
-
   // Failure message
-  String _failureMessage = 'Liveness check failed. No blinks detected.';
+  String _failureMessage = 'Face not recognized.';
 
-  // Matched employee info from face verification
+  // Matched employee info
   String? _matchedEmployeeName;
   double _matchedConfidence = 0.0;
 
@@ -107,7 +99,7 @@ class _FaceVerificationDialogState
         setState(() {
           _isInitialized = true;
         });
-        _startWelcomePhase();
+        _startCountdown();
       }
     } catch (e) {
       if (mounted) {
@@ -118,131 +110,62 @@ class _FaceVerificationDialogState
     }
   }
 
-  // ─── Phase 1: Welcome ─────────────────────────────────────────────
+  // ─── Phase 1: Countdown ──────────────────────────────────────────
 
-  void _startWelcomePhase() {
+  void _startCountdown() {
     setState(() {
-      _phase = _VerificationPhase.welcome;
-      _welcomeCountdown = 3;
+      _phase = _VerificationPhase.countdown;
+      _countdown = 3;
     });
 
-    _welcomeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        _welcomeCountdown--;
-      });
-      if (_welcomeCountdown <= 0) {
-        timer.cancel();
-        _startCapturePhase();
-      }
-    });
-  }
-
-  // ─── Phase 2: Capture ─────────────────────────────────────────────
-
-  void _startCapturePhase() {
-    setState(() {
-      _phase = _VerificationPhase.capture;
-      _captureCountdown = 15;
-      _framesCaptured = 0;
-      _frameBuffer.clear();
-      _lastPhotoPath = null;
-    });
-
-    // Capture a frame every 500ms
-    _captureTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      _captureFrame();
-    });
-
-    // Countdown display ticks every 1s
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
       setState(() {
-        _captureCountdown--;
+        _countdown--;
       });
-      if (_captureCountdown <= 0) {
+      if (_countdown <= 0) {
         timer.cancel();
-        _captureTimer?.cancel();
-        _startProcessingPhase();
+        _captureAndVerify();
       }
     });
   }
 
-  Future<void> _captureFrame() async {
-    if (_controller == null ||
-        !_isInitialized ||
-        _isTakingPicture ||
-        _phase != _VerificationPhase.capture) {
-      return;
-    }
+  // ─── Phase 2: Capture single photo & verify ──────────────────────
 
-    _isTakingPicture = true;
+  Future<void> _captureAndVerify() async {
+    if (_controller == null || !_isInitialized) return;
+
+    setState(() {
+      _phase = _VerificationPhase.capturing;
+    });
+
+    HapticFeedback.mediumImpact();
 
     try {
+      // Capture ONE photo
       final XFile photo = await _controller!.takePicture();
       final bytes = await photo.readAsBytes();
       final base64Str = base64Encode(bytes);
       final dataUri = 'data:image/jpeg;base64,$base64Str';
-
-      // FIFO buffer
-      if (_frameBuffer.length >= _maxFrames) {
-        _frameBuffer.removeAt(0);
-      }
-      _frameBuffer.add(dataUri);
       _lastPhotoPath = photo.path;
 
-      if (mounted) {
-        setState(() {
-          _framesCaptured = _frameBuffer.length;
-        });
-      }
-    } catch (e) {
-      debugPrint('Frame capture error: $e');
-    } finally {
-      _isTakingPicture = false;
-    }
-  }
-
-  // ─── Phase 3: Processing ──────────────────────────────────────────
-
-  Future<void> _startProcessingPhase() async {
-    setState(() {
-      _phase = _VerificationPhase.processing;
-    });
-
-    if (_frameBuffer.isEmpty) {
       setState(() {
-        _phase = _VerificationPhase.failed;
-        _failureMessage = 'No frames captured. Please try again.';
+        _phase = _VerificationPhase.processing;
       });
-      return;
-    }
 
-    try {
+      // Send to Flask /verify_face
       final blinkDio = ref.read(blinkDioProvider);
 
-      // ── Step 1: Liveness check (blink detection) ──
-      final livenessResponse = await blinkDio.post(
-        '/upload_nodes',
-        data: {
-          'all_frames': _frameBuffer,
-          'detection_cache': <Map<String, dynamic>>[],
-        },
-      );
+      final response = await blinkDio.post('/verify_face', data: {
+        'frame': dataUri,
+      });
 
       if (!mounted) return;
 
-      if (livenessResponse.statusCode != 200 || livenessResponse.data == null) {
+      if (response.statusCode != 200 || response.data == null) {
         setState(() {
           _phase = _VerificationPhase.failed;
           _failureMessage = 'Server returned an unexpected response.';
@@ -250,46 +173,55 @@ class _FaceVerificationDialogState
         return;
       }
 
-      final livenessData = livenessResponse.data;
-      final status = livenessData['status'] as String?;
-      final blinked = livenessData['blinked'] as int? ?? 0;
-      final liveness = livenessData['liveness'] as bool? ?? false;
+      final data = response.data;
+      final status = data['status'] as String?;
+      final serverError = data['error'] as String?;
 
-      if (status != 'success' || blinked < 1 || !liveness) {
+      // Check for multiple faces
+      if (serverError == 'multiple_faces_detected') {
         setState(() {
           _phase = _VerificationPhase.failed;
-          _failureMessage = blinked == 0
-              ? 'No blinks detected. Please blink naturally and try again.'
-              : 'Liveness verification failed. Please try again.';
+          _failureMessage = 'Multiple faces detected. Only one person should be in the frame.';
         });
         return;
       }
 
-      // ── Step 2: Check face verification result from blink server ──
-      // The /upload_nodes endpoint already verifies the face against registered employees
-      final verification = livenessData['verification'] as Map<String, dynamic>?;
+      // Check for other errors
+      if (status == 'failed') {
+        setState(() {
+          _phase = _VerificationPhase.failed;
+          _failureMessage = serverError ?? 'Verification failed. Please try again.';
+        });
+        return;
+      }
 
-      if (verification != null) {
-        final isMatched = verification['matched'] as bool? ?? false;
-        final employeeName = verification['employee_name'] as String?;
-        final confidence = (verification['confidence'] as num?)?.toDouble() ?? 0.0;
+      final isMatched = data['matched'] as bool? ?? false;
+      final employeeName = data['employee_name'] as String?;
+      final confidence = (data['confidence'] as num?)?.toDouble() ?? 0.0;
 
-        if (isMatched && employeeName != null) {
-          debugPrint('[FaceVerification] MATCH: $employeeName (${(confidence * 100).toStringAsFixed(1)}%)');
-          _matchedEmployeeName = employeeName;
-          _matchedConfidence = confidence;
-          _onVerificationSuccess();
-        } else {
-          debugPrint('[FaceVerification] NO MATCH (confidence: ${(confidence * 100).toStringAsFixed(1)}%)');
-          setState(() {
-            _phase = _VerificationPhase.failed;
-            _failureMessage = 'Face not recognized. You are not a registered employee.';
-          });
-        }
+      if (isMatched && employeeName != null) {
+        debugPrint('[FaceVerification] MATCH: $employeeName (${(confidence * 100).toStringAsFixed(1)}%)');
+        _matchedEmployeeName = employeeName;
+        _matchedConfidence = confidence;
+        _onVerificationSuccess();
+        return;
+      }
+
+      // Fallback: try offline face match using cached data
+      debugPrint('[FaceVerification] Server match failed — trying offline cache...');
+      final offlineResult = await _tryOfflineFaceMatch(blinkDio, dataUri);
+
+      if (!mounted) return;
+
+      if (offlineResult != null) {
+        _matchedEmployeeName = offlineResult['employee_name'] as String?;
+        _matchedConfidence = (offlineResult['confidence'] as num?)?.toDouble() ?? 0.0;
+        debugPrint('[FaceVerification] MATCH via cached data: $_matchedEmployeeName');
+        _onVerificationSuccess();
       } else {
         setState(() {
           _phase = _VerificationPhase.failed;
-          _failureMessage = 'Face verification unavailable. Please try again.';
+          _failureMessage = 'Face not recognized. You are not a registered employee.';
         });
       }
     } on DioException catch (e) {
@@ -310,15 +242,55 @@ class _FaceVerificationDialogState
     }
   }
 
-  // ─── Phase 4a: Success ────────────────────────────────────────────
+  /// Try face matching using locally cached employee face photos.
+  Future<Map<String, dynamic>?> _tryOfflineFaceMatch(Dio blinkDio, String capturedFrame) async {
+    try {
+      final localFaceStore = ref.read(localFaceStoreProvider);
+      final cachedFaces = await localFaceStore.getAllCachedFaces();
+
+      if (cachedFaces.isEmpty) {
+        debugPrint('[FaceVerification] No cached faces available for offline match.');
+        return null;
+      }
+
+      final employees = cachedFaces.map((emp) => {
+            'id': emp.id,
+            'name': emp.name,
+            'facePhoto': emp.facePhotoBase64,
+          }).toList();
+
+      debugPrint('[FaceVerification] Trying offline match against ${employees.length} cached employees...');
+
+      final response = await blinkDio.post('/classify_face', data: {
+        'captured_frame': capturedFrame,
+        'employees': employees,
+      });
+
+      if (response.statusCode == 200 && response.data != null) {
+        final matched = response.data['matched'] as bool? ?? false;
+        if (matched) {
+          return response.data as Map<String, dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint('[FaceVerification] Offline face match error: $e');
+    }
+    return null;
+  }
+
+  // ─── Success ─────────────────────────────────────────────────────
 
   void _onVerificationSuccess() {
+    // Haptic feedback — success pattern
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 150), () => HapticFeedback.mediumImpact());
+    Future.delayed(const Duration(milliseconds: 300), () => HapticFeedback.lightImpact());
+
     setState(() {
       _phase = _VerificationPhase.success;
     });
 
-    // Brief success display, then return result
-    Future.delayed(const Duration(milliseconds: 2000), () {
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
         widget.onComplete(FaceVerificationResult(
           photoPath: _lastPhotoPath,
@@ -330,19 +302,16 @@ class _FaceVerificationDialogState
     });
   }
 
-  // ─── Phase 4b: Retry ─────────────────────────────────────────────
-
-  void _retry() {
-    _cancelTimers();
-    _startWelcomePhase();
+  void _vibrateError() {
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 100), () => HapticFeedback.heavyImpact());
   }
 
-  // ─── Cancel / Dispose ─────────────────────────────────────────────
+  // ─── Retry ──────────────────────────────────────────────────────
 
-  void _cancelTimers() {
-    _welcomeTimer?.cancel();
-    _captureTimer?.cancel();
+  void _retry() {
     _countdownTimer?.cancel();
+    _startCountdown();
   }
 
   void _cancelDialog() {
@@ -357,12 +326,12 @@ class _FaceVerificationDialogState
 
   @override
   void dispose() {
-    _cancelTimers();
+    _countdownTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
 
-  // ─── Build ────────────────────────────────────────────────────────
+  // ─── Build ──────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -380,10 +349,7 @@ class _FaceVerificationDialogState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               _buildHeader(),
-
-              // Camera Preview
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -395,8 +361,6 @@ class _FaceVerificationDialogState
                   child: _buildCameraContent(),
                 ),
               ),
-
-              // Phase-specific bottom section
               _buildBottomSection(),
             ],
           ),
@@ -411,19 +375,19 @@ class _FaceVerificationDialogState
     IconData headerIcon;
 
     switch (_phase) {
-      case _VerificationPhase.welcome:
+      case _VerificationPhase.countdown:
         headerColor = AppColors.primary;
         headerText = 'Face Verification';
         headerIcon = Icons.face;
         break;
-      case _VerificationPhase.capture:
+      case _VerificationPhase.capturing:
         headerColor = Colors.orange.shade700;
-        headerText = 'Capturing - Blink Naturally';
-        headerIcon = Icons.visibility;
+        headerText = 'Capturing...';
+        headerIcon = Icons.camera_alt;
         break;
       case _VerificationPhase.processing:
         headerColor = Colors.blue.shade700;
-        headerText = 'Verifying Liveness...';
+        headerText = 'Verifying Identity...';
         headerIcon = Icons.hourglass_top;
         break;
       case _VerificationPhase.success:
@@ -464,7 +428,8 @@ class _FaceVerificationDialogState
             ),
           ),
           if (_phase != _VerificationPhase.processing &&
-              _phase != _VerificationPhase.success)
+              _phase != _VerificationPhase.success &&
+              _phase != _VerificationPhase.capturing)
             IconButton(
               onPressed: _cancelDialog,
               icon: const Icon(Icons.close, color: Colors.white, size: 20),
@@ -513,18 +478,17 @@ class _FaceVerificationDialogState
       );
     }
 
-    // Success/Failed overlays
     if (_phase == _VerificationPhase.success) {
       return _buildSuccessOverlay();
     }
-    if (_phase == _VerificationPhase.processing) {
+    if (_phase == _VerificationPhase.processing || _phase == _VerificationPhase.capturing) {
       return _buildProcessingOverlay();
     }
     if (_phase == _VerificationPhase.failed) {
       return _buildFailedOverlay();
     }
 
-    // Camera preview with overlays
+    // Camera preview with countdown
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -537,9 +501,7 @@ class _FaceVerificationDialogState
             height: 280,
             decoration: BoxDecoration(
               border: Border.all(
-                color: _phase == _VerificationPhase.capture
-                    ? Colors.orange.withValues(alpha: 0.8)
-                    : AppColors.success.withValues(alpha: 0.8),
+                color: AppColors.success.withValues(alpha: 0.8),
                 width: 3,
               ),
               borderRadius: BorderRadius.circular(120),
@@ -554,83 +516,31 @@ class _FaceVerificationDialogState
           right: 30,
           bottom: 30,
           child: CustomPaint(
-            painter: _CornerGuidePainter(
-              color: _phase == _VerificationPhase.capture
-                  ? Colors.orange
-                  : Colors.white,
-            ),
+            painter: _CornerGuidePainter(color: Colors.white),
           ),
         ),
 
         // Countdown overlay
-        if (_phase == _VerificationPhase.welcome)
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha:0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$_welcomeCountdown',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ).animate().scale(
-                  duration: 800.ms,
-                  curve: Curves.easeOutBack,
-                ),
-          ),
-
-        // Capture countdown
-        if (_phase == _VerificationPhase.capture)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha:0.6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${_captureCountdown}s',
-                style: const TextStyle(
-                  color: Colors.orange,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$_countdown',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-
-        // Frame counter during capture
-        if (_phase == _VerificationPhase.capture)
-          Positioned(
-            bottom: 8,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha:0.6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Frames: $_framesCaptured',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
+          ).animate().scale(
+                duration: 800.ms,
+                curve: Curves.easeOutBack,
               ),
-            ),
-          ),
+        ),
       ],
     );
   }
@@ -642,68 +552,134 @@ class _FaceVerificationDialogState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Show captured face photo
-            if (_lastPhotoPath != null)
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.success, width: 3),
-                  image: DecorationImage(
-                    image: FileImage(File(_lastPhotoPath!)),
-                    fit: BoxFit.cover,
+            // Face photo with green tick badge
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.3),
+                      width: 4,
+                    ),
                   ),
+                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                if (_lastPhotoPath != null)
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.success, width: 3),
+                      image: DecorationImage(
+                        image: FileImage(File(_lastPhotoPath!)),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack)
+                else
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.success, width: 3),
+                      color: AppColors.success.withValues(alpha: 0.15),
+                    ),
+                    child: const Icon(Icons.person, color: AppColors.success, size: 56),
+                  ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+                Positioned(
+                  bottom: 4,
+                  right: 4,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.success.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.check, color: Colors.white, size: 22),
+                  ).animate(delay: 400.ms).scale(
+                        duration: 400.ms,
+                        curve: Curves.easeOutBack,
+                      ),
                 ),
-              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack)
-            else
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 48),
-              ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-            const SizedBox(height: 16),
-            // Show matched employee name
+              ],
+            ),
+            const SizedBox(height: 20),
             if (_matchedEmployeeName != null)
               Text(
-                'Welcome, ${_capitalize(_matchedEmployeeName!)}!',
+                _capitalize(_matchedEmployeeName!),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
-              ).animate().fadeIn(delay: 300.ms)
+              ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0)
             else
               const Text(
                 'Verified!',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ).animate().fadeIn(delay: 300.ms),
             const SizedBox(height: 8),
-            // Confidence score
-            if (_matchedConfidence > 0)
-              Text(
-                'Confidence: ${(_matchedConfidence * 100).toStringAsFixed(1)}%',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 14,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified, color: AppColors.success, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  _matchedConfidence > 0
+                      ? 'Identity Verified  -  ${(_matchedConfidence * 100).toStringAsFixed(1)}%'
+                      : 'Identity Verified',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
                 ),
-              ).animate().fadeIn(delay: 500.ms),
-            const SizedBox(height: 4),
-            const Text(
-              'Attendance Marked: PRESENT',
-              style: TextStyle(
-                color: AppColors.success,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              ],
+            ).animate().fadeIn(delay: 500.ms),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.4),
+                ),
               ),
-            ).animate().fadeIn(delay: 600.ms),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Attendance Marked: PRESENT',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 650.ms).slideY(begin: 0.3, end: 0),
           ],
         ),
       ),
@@ -713,11 +689,11 @@ class _FaceVerificationDialogState
   Widget _buildProcessingOverlay() {
     return Container(
       color: Colors.black,
-      child: Center(
+      child: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 60,
               height: 60,
               child: CircularProgressIndicator(
@@ -725,19 +701,19 @@ class _FaceVerificationDialogState
                 valueColor: AlwaysStoppedAnimation(Colors.blue),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Text(
-              'Analyzing $_framesCaptured frames...',
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Verifying liveness & identity',
+              'Verifying identity...',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Please wait',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ],
         ),
@@ -746,6 +722,7 @@ class _FaceVerificationDialogState
   }
 
   Widget _buildFailedOverlay() {
+    _vibrateError();
     return Container(
       color: Colors.black,
       child: Center(
@@ -757,7 +734,7 @@ class _FaceVerificationDialogState
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha:0.2),
+                  color: AppColors.error.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child:
@@ -778,7 +755,7 @@ class _FaceVerificationDialogState
 
   Widget _buildBottomSection() {
     switch (_phase) {
-      case _VerificationPhase.welcome:
+      case _VerificationPhase.countdown:
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           child: Text(
@@ -788,26 +765,7 @@ class _FaceVerificationDialogState
           ),
         );
 
-      case _VerificationPhase.capture:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.visibility, color: Colors.orange.shade700, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'Blink naturally while looking at the camera',
-                style: TextStyle(
-                  color: Colors.orange.shade700,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-
+      case _VerificationPhase.capturing:
       case _VerificationPhase.processing:
         return const Padding(
           padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -885,7 +843,7 @@ class _CornerGuidePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withValues(alpha:0.6)
+      ..color = color.withValues(alpha: 0.6)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
@@ -937,7 +895,7 @@ class _CornerGuidePainter extends CustomPainter {
       color != oldDelegate.color;
 }
 
-/// Show face verification dialog with liveness detection.
+/// Show face verification dialog.
 /// Returns FaceVerificationResult on success, null on cancel/failure.
 Future<FaceVerificationResult?> showFaceVerificationDialog(BuildContext context) async {
   FaceVerificationResult? result;

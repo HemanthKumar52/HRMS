@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,7 +37,8 @@ class AttendanceScreen extends ConsumerStatefulWidget {
   ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
+class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
+    with SingleTickerProviderStateMixin {
   bool _isPunching = false;
   LatLng? _currentLocation;
   bool _isInsideGeofence = false;
@@ -60,9 +62,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   // Strict location permission gate
   bool _locationGranted = false;
 
+  // Pulse animation for clock button
+  late final AnimationController _pulseController;
+
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     // Start real-time clock that ticks every second
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
@@ -79,6 +88,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   @override
   void dispose() {
     _clockTimer?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -559,6 +569,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
         if (result?.isOffline == true) msg += ' (Offline)';
 
+        HapticFeedback.heavyImpact();
         DynamicIslandManager().show(context, message: msg);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
@@ -874,60 +885,88 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             ),
                             SizedBox(height: Responsive.value(mobile: 28.0, tablet: 36.0)),
 
-                            // Circular Clock In/Out Button
-                            GestureDetector(
-                              onTap: _isPunching ||
-                                  (workModeNotifier.requiresGeofence && !_isInsideGeofence)
-                                  ? null
-                                  : () => _handlePunchToggle(isClockedIn),
-                              child: Container(
-                                width: Responsive.value(mobile: 130.0, tablet: 160.0),
-                                height: Responsive.value(mobile: 130.0, tablet: 160.0),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: isClockedIn
-                                        ? [const Color(0xFFB71C1C), const Color(0xFFE53935)]
-                                        : [const Color(0xFF1B3A4B), const Color(0xFF1B8A6B)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: (isClockedIn ? Colors.red : const Color(0xFF1B8A6B)).withValues(alpha: 0.4),
-                                      blurRadius: 24,
-                                      offset: const Offset(0, 8),
+                            // Circular Clock In/Out Button with pulse glow
+                            AnimatedBuilder(
+                              animation: _pulseController,
+                              builder: (context, child) {
+                                final pulseValue = _pulseController.value;
+                                final glowColor = isClockedIn ? Colors.red : const Color(0xFF1B8A6B);
+                                final isDisabled = _isPunching ||
+                                    (workModeNotifier.requiresGeofence && !_isInsideGeofence);
+
+                                return GestureDetector(
+                                  onTap: isDisabled
+                                      ? null
+                                      : () {
+                                          HapticFeedback.mediumImpact();
+                                          _handlePunchToggle(isClockedIn);
+                                        },
+                                  child: Container(
+                                    width: Responsive.value(mobile: 150.0, tablet: 180.0),
+                                    height: Responsive.value(mobile: 150.0, tablet: 180.0),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: isDisabled
+                                          ? []
+                                          : [
+                                              BoxShadow(
+                                                color: glowColor.withValues(alpha: 0.15 + pulseValue * 0.25),
+                                                blurRadius: 24 + pulseValue * 16,
+                                                spreadRadius: pulseValue * 8,
+                                              ),
+                                            ],
                                     ),
-                                  ],
-                                ),
-                                child: _isPunching
-                                    ? const Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 3,
-                                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    child: Container(
+                                      width: Responsive.value(mobile: 130.0, tablet: 160.0),
+                                      height: Responsive.value(mobile: 130.0, tablet: 160.0),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: isClockedIn
+                                              ? [const Color(0xFFB71C1C), const Color(0xFFE53935)]
+                                              : [const Color(0xFF1B3A4B), const Color(0xFF1B8A6B)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                      )
-                                    : Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            isClockedIn ? Icons.logout : Icons.login,
-                                            color: Colors.white,
-                                            size: Responsive.sp(36),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            isClockedIn ? 'CLOCK OUT' : 'CLOCK IN',
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.white,
-                                              fontSize: Responsive.sp(13),
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1,
-                                            ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: glowColor.withValues(alpha: 0.4),
+                                            blurRadius: 24,
+                                            offset: const Offset(0, 8),
                                           ),
                                         ],
                                       ),
-                              ),
+                                      child: _isPunching
+                                          ? const Center(
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                                              ),
+                                            )
+                                          : Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  isClockedIn ? Icons.logout : Icons.login,
+                                                  color: Colors.white,
+                                                  size: Responsive.sp(36),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  isClockedIn ? 'CLOCK OUT' : 'CLOCK IN',
+                                                  style: GoogleFonts.poppins(
+                                                    color: Colors.white,
+                                                    fontSize: Responsive.sp(13),
+                                                    fontWeight: FontWeight.bold,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ).animate().scale(delay: 400.ms, duration: 500.ms, curve: Curves.easeOutBack),
 
                             if (workModeNotifier.requiresGeofence && !_isInsideGeofence)
@@ -1164,7 +1203,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final selectedPeriod = ref.watch(selectedPeriodProvider);
     final isSelected = selectedPeriod == period;
     return GestureDetector(
-      onTap: () => ref.read(selectedPeriodProvider.notifier).state = period,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        ref.read(selectedPeriodProvider.notifier).state = period;
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1307,6 +1349,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          HapticFeedback.selectionClick();
           ref.read(workModeProvider.notifier).setWorkMode(mode);
         },
         child: AnimatedContainer(

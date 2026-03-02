@@ -2,13 +2,16 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConstants {
+  /// Your PC's local network IP — update if your IP changes
+  static const String _hostIp = '192.168.1.35';
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:3000/api/v1';
     }
 
-    // adb reverse tcp:3000 tcp:3000 enables localhost forwarding from emulator to host
-    return 'http://localhost:3000/api/v1';
+    // Physical device connects via local network IP
+    return 'http://$_hostIp:3000/api/v1';
   }
 
   /// Blink detection Flask server (liveness verification)
@@ -17,7 +20,7 @@ class ApiConstants {
       return 'http://localhost:5000';
     }
 
-    return 'http://localhost:5000';
+    return 'http://$_hostIp:5000';
   }
 
   // Auth

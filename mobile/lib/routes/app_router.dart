@@ -33,6 +33,39 @@ import '../features/finance/presentation/finance_screen.dart';
 import '../features/home/presentation/timesheet_screen.dart';
 import '../shared/providers/work_mode_provider.dart';
 
+/// Smooth fade + slide up transition for full-screen push routes
+CustomTransitionPage<T> _slideUpPage<T>(Widget child, GoRouterState state) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(curved),
+        child: FadeTransition(opacity: curved, child: child),
+      );
+    },
+  );
+}
+
+/// Fade-through transition for tab-level navigation
+CustomTransitionPage<T> _fadeThrough<T>(Widget child, GoRouterState state) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+}
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -82,7 +115,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _fadeThrough(const LoginScreen(), state),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -91,35 +124,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/',
             name: 'home',
-            builder: (context, state) => const HomeScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const HomeScreen(), state),
           ),
           GoRoute(
             path: '/requests',
             name: 'requests',
-            builder: (context, state) => const RequestTrackingScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const RequestTrackingScreen(), state),
             routes: [
               GoRoute(
                 path: 'apply',
                 name: 'apply-leave',
                 parentNavigatorKey: _rootNavigatorKey,
-                builder: (context, state) => const ApplyLeaveScreen(),
+                pageBuilder: (context, state) => _slideUpPage(const ApplyLeaveScreen(), state),
               ),
               GoRoute(
                 path: ':id/track',
                 name: 'leave-track',
                 parentNavigatorKey: _rootNavigatorKey,
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return LeaveTrackScreen(leaveId: id);
+                  return _slideUpPage(LeaveTrackScreen(leaveId: id), state);
                 },
               ),
               GoRoute(
                 path: ':id',
                 name: 'leave-detail',
                 parentNavigatorKey: _rootNavigatorKey,
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return LeaveDetailScreen(leaveId: id);
+                  return _slideUpPage(LeaveDetailScreen(leaveId: id), state);
                 },
               ),
             ],
@@ -127,20 +160,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/attendance',
             name: 'attendance',
-            builder: (context, state) => const AttendanceScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const AttendanceScreen(), state),
           ),
           GoRoute(
             path: '/directory',
             name: 'directory',
-            builder: (context, state) => const DirectoryScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const DirectoryScreen(), state),
             routes: [
               GoRoute(
                 path: ':id',
                 name: 'employee-detail',
                 parentNavigatorKey: _rootNavigatorKey,
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
-                  return EmployeeDetailScreen(employeeId: id);
+                  return _slideUpPage(EmployeeDetailScreen(employeeId: id), state);
                 },
               ),
             ],
@@ -148,57 +181,57 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/notifications',
             name: 'notifications',
-            builder: (context, state) => const NotificationsScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const NotificationsScreen(), state),
           ),
           GoRoute(
             path: '/hr-dashboard',
             name: 'hr-dashboard',
-            builder: (context, state) => const HrDashboardScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const HrDashboardScreen(), state),
           ),
           GoRoute(
             path: '/payroll-dashboard',
             name: 'payroll-dashboard',
-            builder: (context, state) => const PayrollDashboardScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const PayrollDashboardScreen(), state),
           ),
           GoRoute(
             path: '/it-admin-dashboard',
             name: 'it-admin-dashboard',
-            builder: (context, state) => const ItAdminDashboardScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const ItAdminDashboardScreen(), state),
           ),
           GoRoute(
             path: '/manager-dashboard',
             name: 'manager-dashboard',
-            builder: (context, state) => const ManagerDashboardScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const ManagerDashboardScreen(), state),
           ),
           GoRoute(
             path: '/approvals',
             name: 'approvals',
-            builder: (context, state) => const ApprovalsScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const ApprovalsScreen(), state),
           ),
           GoRoute(
             path: '/tasks',
             name: 'tasks',
-            builder: (context, state) => const MyTasksScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const MyTasksScreen(), state),
           ),
           GoRoute(
             path: '/onboarding-tasks',
             name: 'onboarding-tasks',
-            builder: (context, state) => const OnboardingTasksScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const OnboardingTasksScreen(), state),
           ),
           GoRoute(
             path: '/profile',
             name: 'profile',
-            builder: (context, state) => const ProfileScreen(),
+            pageBuilder: (context, state) => _slideUpPage(const ProfileScreen(), state),
           ),
           GoRoute(
             path: '/settings',
             name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
+            pageBuilder: (context, state) => _slideUpPage(const SettingsScreen(), state),
           ),
           GoRoute(
             path: '/finance',
             name: 'finance',
-            builder: (context, state) => const FinanceScreen(),
+            pageBuilder: (context, state) => _fadeThrough(const FinanceScreen(), state),
           ),
         ],
       ),
@@ -206,19 +239,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/create-claim',
         name: 'create-claim',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const CreateClaimScreen(),
+        pageBuilder: (context, state) => _slideUpPage(const CreateClaimScreen(), state),
       ),
       GoRoute(
         path: '/create-ticket',
         name: 'create-ticket',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const CreateTicketScreen(),
+        pageBuilder: (context, state) => _slideUpPage(const CreateTicketScreen(), state),
       ),
       GoRoute(
         path: '/create-shift-request',
         name: 'create-shift-request',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const CreateShiftRequestScreen(),
+        pageBuilder: (context, state) => _slideUpPage(const CreateShiftRequestScreen(), state),
       ),
       GoRoute(
         path: '/add-employee',
@@ -226,18 +259,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         redirect: (context, state) {
           final user = ref.read(currentUserProvider);
-          if (user == null || (user.role != 'MANAGER' && user.role != 'HR_ADMIN')) {
+          if (user == null || (user.role != 'MANAGER' && user.role != 'HR_ADMIN' && user.role != 'ADMIN')) {
             return '/';
           }
           return null;
         },
-        builder: (context, state) => const AddEmployeeScreen(),
+        pageBuilder: (context, state) => _slideUpPage(const AddEmployeeScreen(), state),
       ),
       GoRoute(
         path: '/timesheet',
         name: 'timesheet',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const TimesheetScreen(),
+        pageBuilder: (context, state) => _slideUpPage(const TimesheetScreen(), state),
       ),
     ],
   );

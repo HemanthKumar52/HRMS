@@ -26,5 +26,117 @@
     "status": "ABSENT",
     "confidence": 0.0,
     "session": "session_2026-02-27_10-03-31"
+  },
+  {
+    "timestamp": "2026-02-27T12:05:42.653013",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_10-03-31"
+  },
+  {
+    "timestamp": "2026-02-27T12:06:05.763132",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_10-03-31"
+  },
+  {
+    "timestamp": "2026-02-27T12:06:55.024123",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_10-03-31"
+  },
+  {
+    "timestamp": "2026-02-27T12:19:32.840057",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_12-08-01"
+  },
+  {
+    "timestamp": "2026-02-27T16:29:00.661459",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-02-27_12-17-34"
+  },
+  {
+    "timestamp": "2026-03-02T10:35:19.839277",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_10-24-56"
+  },
+  {
+    "timestamp": "2026-03-02T10:35:31.162218",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_10-24-56"
+  },
+  {
+    "timestamp": "2026-03-02T11:31:17.808078",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-27-37"
+  },
+  {
+    "timestamp": "2026-03-02T11:31:30.333561",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-27-37"
+  },
+  {
+    "timestamp": "2026-03-02T11:31:40.542955",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-27-37"
+  },
+  {
+    "timestamp": "2026-03-02T11:31:51.670054",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-27-37"
+  },
+  {
+    "timestamp": "2026-03-02T11:46:03.464355",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-44-20"
+  },
+  {
+    "timestamp": "2026-03-02T11:46:14.326329",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-44-20"
+  },
+  {
+    "timestamp": "2026-03-02T11:50:00.742758",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-44-20"
+  },
+  {
+    "timestamp": "2026-03-02T11:51:25.942327",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-44-20"
+  },
+  {
+    "timestamp": "2026-03-02T11:51:37.720566",
+    "employee": null,
+    "status": "ABSENT",
+    "confidence": 0.0,
+    "session": "session_2026-03-02_11-44-20"
   }
 ]

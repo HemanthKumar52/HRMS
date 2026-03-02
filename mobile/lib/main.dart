@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'app.dart';
+import 'core/services/local_face_store.dart';
 import 'core/services/offline_queue_service.dart';
 import 'core/services/push_notification_service.dart';
 import 'core/services/sync_service.dart';
@@ -21,6 +22,10 @@ void main() async {
   // Initialize offline queue service
   final offlineQueueService = OfflineQueueService();
   await offlineQueueService.init();
+
+  // Initialize local face store for offline face recognition
+  final localFaceStore = LocalFaceStore();
+  await localFaceStore.init();
 
   // Initialize push notification service
   final pushNotificationService = PushNotificationService();
@@ -46,6 +51,7 @@ void main() async {
         offlineQueueServiceProvider.overrideWithValue(offlineQueueService),
         pushNotificationServiceProvider.overrideWithValue(pushNotificationService),
         syncServiceProvider.overrideWithValue(syncService),
+        localFaceStoreProvider.overrideWithValue(localFaceStore),
       ],
       child: const HRMSApp(),
     ),

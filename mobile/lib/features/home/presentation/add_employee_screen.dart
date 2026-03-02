@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +14,7 @@ import '../../../core/theme/app_theme_extensions.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/dynamic_island_notification.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/blink_api_client.dart';
 
 class AddEmployeeScreen extends ConsumerStatefulWidget {
   const AddEmployeeScreen({super.key});
@@ -26,10 +29,11 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _employeeIdController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   String? _capturedPhotoPath;
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -37,7 +41,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _employeeIdController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -70,7 +74,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        DynamicIslandManager().show(context, message: 'Camera error: $e');
+        DynamicIslandManager().show(context, message: 'Camera error: $e', isError: true);
       }
     }
   }
@@ -79,7 +83,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_capturedPhotoPath == null) {
-      DynamicIslandManager().show(context, message: 'Please capture employee face photo');
+      DynamicIslandManager().show(context, message: 'Please capture employee face photo', isError: true);
       return;
     }
 
@@ -87,32 +91,105 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
+      final blinkDio = ref.read(blinkDioProvider);
 
       // Read captured face photo and encode as base64
       final photoBytes = await File(_capturedPhotoPath!).readAsBytes();
       final photoBase64 = base64Encode(photoBytes);
 
-      await apiClient.post('/users', data: {
-        'firstName': _firstNameController.text.trim(),
-        'lastName': _lastNameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'password': 'Welcome@123', // Default password for new employee
-        'role': 'EMPLOYEE',
-        'designation': _employeeIdController.text.trim(),
-        'facePhoto': photoBase64,
-      });
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final employeeName = '$firstName $lastName';
 
+      // Step 1: Check face against existing registered faces
+      bool faceMatchFound = false;
+      String? existingName;
+
+      try {
+        final dupCheck = await blinkDio.post('/check_duplicate_face', data: {
+          'name': employeeName,
+          'face_photo': 'data:image/jpeg;base64,$photoBase64',
+        });
+
+        if (dupCheck.data != null) {
+          faceMatchFound = dupCheck.data['duplicate'] as bool? ?? false;
+          existingName = dupCheck.data['existing_name'] as String?;
+        }
+      } catch (e) {
+        debugPrint('[AddEmployee] Face check failed (proceeding as new): $e');
+      }
+
+      // Step 2: If face matches existing employee, show error
+      if (faceMatchFound && existingName != null && mounted) {
+        setState(() => _isSubmitting = false);
+        DynamicIslandManager().show(
+          context,
+          message: 'This face is already found ($existingName)',
+          isError: true,
+        );
+        return;
+      }
+
+      // Step 3: No match — add as new employee
+      await _createNewEmployee(
+        apiClient: apiClient,
+        blinkDio: blinkDio,
+        firstName: firstName,
+        lastName: lastName,
+        photoBase64: photoBase64,
+      );
+    } on DioException catch (e) {
       if (mounted) {
-        DynamicIslandManager().show(context, message: 'Employee added successfully');
-        context.pop();
+        final msg = e.response?.data is Map
+            ? (e.response!.data['message'] ?? 'Failed to add employee').toString()
+            : 'Failed to add employee';
+        DynamicIslandManager().show(context, message: msg, isError: true);
       }
     } catch (e) {
       if (mounted) {
-        DynamicIslandManager().show(context, message: 'Failed to add employee');
+        DynamicIslandManager().show(context, message: 'Failed to add employee', isError: true);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  /// Create a brand new employee in backend DB + register face on Flask
+  Future<void> _createNewEmployee({
+    required ApiClient apiClient,
+    required Dio blinkDio,
+    required String firstName,
+    required String lastName,
+    required String photoBase64,
+  }) async {
+    final employeeName = '$firstName $lastName';
+
+    // Create user in backend DB
+    await apiClient.post('/users', data: {
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': _emailController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'password': _passwordController.text.trim(),
+      'role': 'EMPLOYEE',
+      'facePhoto': photoBase64,
+    });
+
+    // Register face on the Flask blink server
+    try {
+      await blinkDio.post('/register_face', data: {
+        'name': employeeName,
+        'face_photo': 'data:image/jpeg;base64,$photoBase64',
+      });
+      debugPrint('[AddEmployee] Face registered on blink server: $employeeName');
+    } catch (e) {
+      debugPrint('[AddEmployee] Face registration on blink server failed: $e');
+    }
+
+    if (mounted) {
+      HapticFeedback.heavyImpact();
+      DynamicIslandManager().show(context, message: '$employeeName added successfully');
+      context.pop();
     }
   }
 
@@ -225,12 +302,50 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
                     v == null || v.trim().isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
-              _buildTextField(
-                controller: _employeeIdController,
-                label: 'Employee ID',
-                icon: Icons.badge_outlined,
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Required' : null,
+              // Password field
+              GlassCard(
+                blur: 10,
+                opacity: 0.1,
+                borderRadius: 12,
+                padding: EdgeInsets.zero,
+                child: TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (v.trim().length < 6) return 'Min 6 characters';
+                    return null;
+                  },
+                  style: GoogleFonts.poppins(
+                    color: context.textPrimary,
+                    fontSize: 14,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    labelStyle: GoogleFonts.poppins(
+                      color: context.textSecondary,
+                      fontSize: 14,
+                    ),
+                    prefixIcon: Icon(Icons.lock_outline, color: context.textTertiary, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: context.textTertiary,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    errorStyle: GoogleFonts.poppins(fontSize: 11),
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
 
@@ -420,3 +535,4 @@ class _FaceCaptureDialog extends StatelessWidget {
     );
   }
 }
+

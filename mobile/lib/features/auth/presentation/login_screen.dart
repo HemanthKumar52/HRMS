@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -20,16 +21,28 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   LoginMethod? _currentLoginMethod;
+  late final AnimationController _bgAnimController;
+
+  @override
+  void initState() {
+    super.initState();
+    _bgAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _bgAnimController.dispose();
     super.dispose();
   }
 
@@ -193,29 +206,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       useSafeArea: true,
       body: Stack(
         children: [
-          Positioned(
-            top: -Responsive.hp(10),
-            right: -Responsive.hp(10),
-            child: Container(
-              width: Responsive.value(mobile: 250.0, tablet: 350.0),
-              height: Responsive.value(mobile: 250.0, tablet: 350.0),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.1),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -Responsive.hp(5),
-            left: -Responsive.hp(5),
-            child: Container(
-              width: Responsive.value(mobile: 180.0, tablet: 250.0),
-              height: Responsive.value(mobile: 180.0, tablet: 250.0),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.secondary.withOpacity(0.1),
-              ),
-            ),
+          // Animated floating background circles
+          AnimatedBuilder(
+            animation: _bgAnimController,
+            builder: (context, _) {
+              final v = _bgAnimController.value;
+              return Stack(
+                children: [
+                  Positioned(
+                    top: -Responsive.hp(10) + v * 20,
+                    right: -Responsive.hp(10) + v * 15,
+                    child: Container(
+                      width: Responsive.value(mobile: 250.0, tablet: 350.0),
+                      height: Responsive.value(mobile: 250.0, tablet: 350.0),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primary.withOpacity(0.06 + v * 0.06),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -Responsive.hp(5) + v * 15,
+                    left: -Responsive.hp(5) + v * 10,
+                    child: Container(
+                      width: Responsive.value(mobile: 180.0, tablet: 250.0),
+                      height: Responsive.value(mobile: 180.0, tablet: 250.0),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.secondary.withOpacity(0.06 + v * 0.06),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
 
           Center(
@@ -266,7 +290,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 24),
 
                     ElevatedButton(
-                      onPressed: _isLoading ? null : () => _handleLogin(),
+                      onPressed: _isLoading ? null : () {
+                        HapticFeedback.lightImpact();
+                        _handleLogin();
+                      },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -296,7 +323,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     // Microsoft SSO Button
                     OutlinedButton(
-                      onPressed: _isLoading ? null : _handleMicrosoftLogin,
+                      onPressed: _isLoading ? null : () {
+                        HapticFeedback.lightImpact();
+                        _handleMicrosoftLogin();
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
