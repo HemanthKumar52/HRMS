@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../theme/app_colors.dart';
@@ -87,7 +87,7 @@ class GlassBottomNavBar extends StatelessWidget {
                   return Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        HapticFeedback.lightImpact();
+                        Vibration.vibrate(duration: 50);
                         onTap(index);
                       },
                       behavior: HitTestBehavior.opaque,

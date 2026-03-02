@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -569,7 +569,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
         }
         if (result?.isOffline == true) msg += ' (Offline)';
 
-        HapticFeedback.heavyImpact();
+        Vibration.vibrate(duration: 200);
         DynamicIslandManager().show(context, message: msg);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
@@ -898,7 +898,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
                                   onTap: isDisabled
                                       ? null
                                       : () {
-                                          HapticFeedback.mediumImpact();
+                                          Vibration.vibrate(duration: 100);
                                           _handlePunchToggle(isClockedIn);
                                         },
                                   child: Container(
@@ -1204,7 +1204,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     final isSelected = selectedPeriod == period;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Vibration.vibrate(duration: 30);
         ref.read(selectedPeriodProvider.notifier).state = period;
       },
       child: AnimatedContainer(
@@ -1349,7 +1349,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          Vibration.vibrate(duration: 30);
           ref.read(workModeProvider.notifier).setWorkMode(mode);
         },
         child: AnimatedContainer(

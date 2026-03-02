@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'dart:async';
 import 'dart:collection'; // Add queue support
 
@@ -16,9 +16,9 @@ class DynamicIslandManager {
   void show(BuildContext context, {required String message, bool isError = false}) {
     // Haptic feedback on notification
     if (isError) {
-      HapticFeedback.heavyImpact();
+      Vibration.vibrate(duration: 300);
     } else {
-      HapticFeedback.lightImpact();
+      Vibration.vibrate(duration: 50);
     }
 
     // Add to queue

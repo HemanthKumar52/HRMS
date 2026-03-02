@@ -48,7 +48,8 @@
       "Bash(npx prisma db seed:*)",
       "Bash(grep:*)",
       "Bash(ipconfig:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(flutter pub:*)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -121,7 +121,7 @@ class ManagerDashboard extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                HapticFeedback.lightImpact();
+                Vibration.vibrate(duration: 50);
                 context.push('/add-employee');
               },
               icon: const Icon(Icons.person_add_alt_1, size: 20),

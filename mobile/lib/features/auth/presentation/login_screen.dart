@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -291,7 +291,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                     ElevatedButton(
                       onPressed: _isLoading ? null : () {
-                        HapticFeedback.lightImpact();
+                        Vibration.vibrate(duration: 50);
                         _handleLogin();
                       },
                       style: ElevatedButton.styleFrom(
@@ -324,7 +324,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     // Microsoft SSO Button
                     OutlinedButton(
                       onPressed: _isLoading ? null : () {
-                        HapticFeedback.lightImpact();
+                        Vibration.vibrate(duration: 50);
                         _handleMicrosoftLogin();
                       },
                       style: OutlinedButton.styleFrom(

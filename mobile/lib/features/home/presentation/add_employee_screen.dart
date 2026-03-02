@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -187,7 +187,7 @@ class _AddEmployeeScreenState extends ConsumerState<AddEmployeeScreen> {
     }
 
     if (mounted) {
-      HapticFeedback.heavyImpact();
+      Vibration.vibrate(duration: 200);
       DynamicIslandManager().show(context, message: '$employeeName added successfully');
       context.pop();
     }

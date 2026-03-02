@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -142,7 +142,7 @@ class _FaceVerificationDialogState
       _phase = _VerificationPhase.capturing;
     });
 
-    HapticFeedback.mediumImpact();
+    Vibration.vibrate(duration: 100);
 
     try {
       // Capture ONE photo
@@ -281,10 +281,8 @@ class _FaceVerificationDialogState
   // ─── Success ─────────────────────────────────────────────────────
 
   void _onVerificationSuccess() {
-    // Haptic feedback — success pattern
-    HapticFeedback.heavyImpact();
-    Future.delayed(const Duration(milliseconds: 150), () => HapticFeedback.mediumImpact());
-    Future.delayed(const Duration(milliseconds: 300), () => HapticFeedback.lightImpact());
+    // Vibration — success pattern (three pulses)
+    Vibration.vibrate(pattern: [0, 200, 100, 150, 100, 100]);
 
     setState(() {
       _phase = _VerificationPhase.success;
@@ -303,8 +301,8 @@ class _FaceVerificationDialogState
   }
 
   void _vibrateError() {
-    HapticFeedback.heavyImpact();
-    Future.delayed(const Duration(milliseconds: 100), () => HapticFeedback.heavyImpact());
+    // Vibration — error pattern (two strong pulses)
+    Vibration.vibrate(pattern: [0, 300, 100, 300]);
   }
 
   // ─── Retry ──────────────────────────────────────────────────────
